@@ -1,195 +1,196 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
-import NavLink from '@/Components/NavLink.vue';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { Link } from '@inertiajs/vue3';
+import { PageProps } from '@/types';
+import {
+    CalendarDays,
+    ChevronDown,
+    CircleDollarSign,
+    FileChartColumn,
+    LayoutDashboard,
+    LockKeyhole,
+    LogOut,
+    Menu,
+    Package,
+    ShoppingCart,
+    Store,
+    UserRound,
+    Users,
+    X,
+} from '@lucide/vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
-const showingNavigationDropdown = ref(false);
+interface LayoutGame {
+    id: number;
+    currentDate: string;
+    dayNumber: number;
+    victoryDays: number;
+}
+
+interface LayoutCompany {
+    name: string;
+}
+
+const page = usePage<
+    PageProps<{
+        game?: LayoutGame | null;
+        company?: LayoutCompany | null;
+    }>
+>();
+const mobileNavigationOpen = ref(false);
+
+const game = computed(() => page.props.game ?? null);
+const company = computed(() => page.props.company ?? null);
+const overviewUrl = computed(() =>
+    game.value ? route('games.show', game.value.id) : route('dashboard'),
+);
+
+const availableNavigation = computed(() => {
+    if (!game.value) {
+        return [{ label: 'Visão geral', icon: LayoutDashboard, href: overviewUrl.value, active: true }];
+    }
+
+    return [
+        { label: 'Visão geral', icon: LayoutDashboard, href: overviewUrl.value, active: route().current('games.show') },
+        { label: 'Vendas', icon: CircleDollarSign, href: route('games.products.index', game.value.id), active: route().current('games.products.*') },
+        { label: 'Compras', icon: ShoppingCart, href: route('games.purchases.index', game.value.id), active: route().current('games.purchases.*') || route().current('games.purchase-orders.*') },
+        { label: 'Estoque', icon: Package, href: route('games.inventory.index', game.value.id), active: route().current('games.inventory.*') },
+        { label: 'Financeiro', icon: CircleDollarSign, href: route('games.finance.index', game.value.id), active: route().current('games.finance.*') },
+        { label: 'Relatórios', icon: FileChartColumn, href: route('games.reports.index', game.value.id), active: route().current('games.reports.*') },
+        { label: 'Equipe', icon: Users, href: route('games.team.index', game.value.id), active: route().current('games.team.*') || route().current('games.employees.*') },
+    ];
+});
+
+const formattedGameDate = computed(() => {
+    if (!game.value) {
+        return null;
+    }
+
+    return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+    }).format(new Date(`${game.value.currentDate}T00:00:00`));
+});
+
+const unavailableNavigation: Array<{ label: string; icon: typeof CircleDollarSign }> = [];
 </script>
 
 <template>
-    <div>
-        <div class="min-h-screen bg-gray-100">
-            <nav
-                class="border-b border-gray-100 bg-white"
-            >
-                <!-- Primary Navigation Menu -->
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="flex h-16 justify-between">
-                        <div class="flex">
-                            <!-- Logo -->
-                            <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
-                                    <ApplicationLogo
-                                        class="block h-9 w-auto fill-current text-gray-800"
-                                    />
-                                </Link>
-                            </div>
+    <div class="min-h-screen bg-[#f4f7fa] text-[#12233f]">
+        <div
+            v-if="mobileNavigationOpen"
+            class="fixed inset-0 z-40 bg-[#071729]/55 lg:hidden"
+            @click="mobileNavigationOpen = false"
+        ></div>
 
-                            <!-- Navigation Links -->
-                            <div
-                                class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
-                            >
-                                <NavLink
-                                    :href="route('dashboard')"
-                                    :active="route().current('dashboard')"
-                                >
-                                    Dashboard
-                                </NavLink>
-                            </div>
-                        </div>
-
-                        <div class="hidden sm:ms-6 sm:flex sm:items-center">
-                            <!-- Settings Dropdown -->
-                            <div class="relative ms-3">
-                                <Dropdown align="right" width="48">
-                                    <template #trigger>
-                                        <span class="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
-                                            >
-                                                {{ $page.props.auth.user.name }}
-
-                                                <svg
-                                                    class="-me-0.5 ms-2 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fill-rule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clip-rule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </template>
-
-                                    <template #content>
-                                        <DropdownLink
-                                            :href="route('profile.edit')"
-                                        >
-                                            Profile
-                                        </DropdownLink>
-                                        <DropdownLink
-                                            :href="route('logout')"
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Log Out
-                                        </DropdownLink>
-                                    </template>
-                                </Dropdown>
-                            </div>
-                        </div>
-
-                        <!-- Hamburger -->
-                        <div class="-me-2 flex items-center sm:hidden">
-                            <button
-                                @click="
-                                    showingNavigationDropdown =
-                                        !showingNavigationDropdown
-                                "
-                                class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
-                            >
-                                <svg
-                                    class="h-6 w-6"
-                                    stroke="currentColor"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        :class="{
-                                            hidden: showingNavigationDropdown,
-                                            'inline-flex':
-                                                !showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        :class="{
-                                            hidden: !showingNavigationDropdown,
-                                            'inline-flex':
-                                                showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Responsive Navigation Menu -->
-                <div
-                    :class="{
-                        block: showingNavigationDropdown,
-                        hidden: !showingNavigationDropdown,
-                    }"
-                    class="sm:hidden"
+        <aside
+            class="fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-[#102b46] text-white transition-transform duration-200 lg:translate-x-0"
+            :class="mobileNavigationOpen ? 'translate-x-0' : '-translate-x-full'"
+        >
+            <div class="flex h-16 items-center justify-between border-b border-white/10 px-5">
+                <Link :href="overviewUrl" class="flex items-center gap-3">
+                    <span class="grid size-9 place-items-center rounded-md bg-[#24c6b3] text-[#0d3049]">
+                        <Store :size="20" stroke-width="2.3" />
+                    </span>
+                    <ApplicationLogo class="text-xl text-white" />
+                </Link>
+                <button
+                    type="button"
+                    class="grid size-9 place-items-center text-white/75 lg:hidden"
+                    aria-label="Fechar navegação"
+                    @click="mobileNavigationOpen = false"
                 >
-                    <div class="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            :href="route('dashboard')"
-                            :active="route().current('dashboard')"
-                        >
-                            Dashboard
-                        </ResponsiveNavLink>
-                    </div>
+                    <X :size="20" />
+                </button>
+            </div>
 
-                    <!-- Responsive Settings Options -->
-                    <div
-                        class="border-t border-gray-200 pb-1 pt-4"
-                    >
-                        <div class="px-4">
-                            <div
-                                class="text-base font-medium text-gray-800"
-                            >
-                                {{ $page.props.auth.user.name }}
-                            </div>
-                            <div class="text-sm font-medium text-gray-500">
-                                {{ $page.props.auth.user.email }}
-                            </div>
-                        </div>
+            <nav class="flex-1 space-y-1 px-3 py-5" aria-label="Navegação principal">
+                <Link
+                    v-for="item in availableNavigation"
+                    :key="item.label"
+                    :href="item.href"
+                    class="flex h-11 items-center gap-3 rounded-md px-3 text-sm font-semibold transition"
+                    :class="item.active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'"
+                    @click="mobileNavigationOpen = false"
+                >
+                    <component :is="item.icon" :size="19" />
+                    {{ item.label }}
+                </Link>
 
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')">
-                                Profile
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                :href="route('logout')"
-                                method="post"
-                                as="button"
-                            >
-                                Log Out
-                            </ResponsiveNavLink>
-                        </div>
-                    </div>
-                </div>
+                <button
+                    v-for="item in unavailableNavigation"
+                    :key="item.label"
+                    type="button"
+                    disabled
+                    class="flex h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm text-white/45"
+                    :title="item.label"
+                >
+                    <component :is="item.icon" :size="19" />
+                    <span class="flex-1">{{ item.label }}</span>
+                    <LockKeyhole :size="13" />
+                </button>
             </nav>
 
-            <!-- Page Heading -->
-            <header
-                class="bg-white shadow"
-                v-if="$slots.header"
-            >
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                    <slot name="header" />
+            <div class="border-t border-white/10 px-5 py-5 text-xs leading-5 text-white/45">
+                Grandes decisões também constroem bons negócios.
+            </div>
+        </aside>
+
+        <div class="lg:pl-60">
+            <header class="sticky top-0 z-30 flex h-16 items-center border-b border-[#dce5ec] bg-white px-4 lg:px-7">
+                <button
+                    type="button"
+                    class="mr-3 grid size-10 place-items-center rounded-md border border-[#dce5ec] text-[#17324f] lg:hidden"
+                    aria-label="Abrir navegação"
+                    @click="mobileNavigationOpen = true"
+                >
+                    <Menu :size="21" />
+                </button>
+
+                <div class="min-w-0 flex-1">
+                    <div class="truncate text-sm font-bold text-[#12233f]">
+                        {{ company?.name ?? 'ERP Game' }}
+                    </div>
+                    <div class="truncate text-xs text-[#6b7f93]">
+                        {{ company ? 'Sua empresa, suas decisões.' : 'Simulação empresarial' }}
+                    </div>
                 </div>
+
+                <div v-if="game" class="hidden items-center gap-3 border-r border-[#dce5ec] pr-6 sm:flex">
+                    <CalendarDays :size="20" class="text-[#173f67]" />
+                    <div>
+                        <div class="text-xs font-semibold capitalize text-[#233b57]">{{ formattedGameDate }}</div>
+                        <div class="text-[11px] text-[#7a8da0]">Dia {{ game.dayNumber }} de {{ game.victoryDays }}</div>
+                    </div>
+                </div>
+
+                <Dropdown align="right" width="48">
+                    <template #trigger>
+                        <button type="button" class="ml-4 flex items-center gap-3 rounded-md px-2 py-1.5 text-left">
+                            <span class="grid size-9 place-items-center rounded-full bg-[#173f67] text-xs font-bold text-white">
+                                {{ page.props.auth.user.name.slice(0, 2).toUpperCase() }}
+                            </span>
+                            <span class="hidden md:block">
+                                <span class="block max-w-36 truncate text-xs font-bold text-[#1d334d]">{{ page.props.auth.user.name }}</span>
+                                <span class="block text-[11px] text-[#7a8da0]">Gestor</span>
+                            </span>
+                            <ChevronDown :size="15" class="hidden text-[#7a8da0] md:block" />
+                        </button>
+                    </template>
+                    <template #content>
+                        <DropdownLink :href="route('profile.edit')">
+                            <span class="flex items-center gap-2"><UserRound :size="16" /> Perfil</span>
+                        </DropdownLink>
+                        <DropdownLink :href="route('logout')" method="post" as="button">
+                            <span class="flex items-center gap-2"><LogOut :size="16" /> Sair</span>
+                        </DropdownLink>
+                    </template>
+                </Dropdown>
             </header>
 
-            <!-- Page Content -->
             <main>
                 <slot />
             </main>

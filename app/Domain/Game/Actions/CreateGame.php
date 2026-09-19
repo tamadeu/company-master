@@ -1,0 +1,96 @@
+<?php
+
+namespace App\Domain\Game\Actions;
+
+use App\Domain\Finance\Services\LedgerService;
+use App\Models\Game;
+use App\Models\User;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
+
+class CreateGame
+{
+    public function __construct(private readonly LedgerService $ledger) {}
+
+    public function execute(User $user, string $gameName, string $companyName, ?int $seed = null): Game
+    {
+        return DB::transaction(function () use ($user, $gameName, $companyName, $seed) {
+            $gameDate = CarbonImmutable::parse(config('game.initial_date'));
+            $game = $user->games()->create([
+                'name' => $gameName,
+                'status' => 'active',
+                'seed' => $seed ?? random_int(1, PHP_INT_MAX),
+                'current_date' => $gameDate,
+                'started_at' => now(),
+            ]);
+
+            $company = $game->company()->create([
+                'name' => $companyName,
+                'cash_balance_cents' => 0,
+                'settings' => [],
+            ]);
+
+            $capitalEntry = $company->financialEntries()->create([
+                'type' => 'inflow',
+                'category' => 'initial_capital',
+                'description' => 'Capital inicial',
+                'amount_cents' => config('game.initial_capital_cents'),
+                'game_date' => $gameDate,
+            ]);
+            $this->ledger->settle($capitalEntry, $gameDate);
+            $company->refresh();
+
+            $products = collect(config('game.products'))->mapWithKeys(function (array $definition) use ($company) {
+                $product = $company->products()->create([
+                    'sku' => $definition['sku'],
+                    'name' => $definition['name'],
+                    'sale_price_cents' => $definition['reference_price_cents'],
+                    'reference_price_cents' => $definition['reference_price_cents'],
+                    'base_daily_demand' => $definition['base_daily_demand'],
+                ]);
+
+                $company->inventoryBalances()->create([
+                    'product_id' => $product->id,
+                    'quantity' => 0,
+                    'average_cost_cents' => 0,
+                ]);
+
+                return [$definition['sku'] => ['model' => $product, 'base_cost_cents' => $definition['base_cost_cents']]];
+            });
+
+            foreach (config('game.suppliers') as $definition) {
+                $supplier = $company->suppliers()->create([
+                    'name' => $definition['name'],
+                    'profile' => $definition['profile'],
+                    'lead_time_days' => $definition['lead_time_days'],
+                    'payment_term_days' => $definition['payment_term_days'],
+                    'reliability_percent' => $definition['reliability_percent'],
+                ]);
+
+                foreach ($products as $product) {
+                    $supplier->products()->create([
+                        'product_id' => $product['model']->id,
+                        'cost_cents' => intdiv(($product['base_cost_cents'] * $definition['cost_percent']) + 50, 100),
+                        'minimum_quantity' => 1,
+                    ]);
+                }
+            }
+
+            foreach (config('game.fixed_expenses') as $expense) {
+                $dueDate = $gameDate->setDay($expense['day_of_month']);
+                $company->financialEntries()->create([
+                    'type' => 'outflow',
+                    'category' => 'fixed_expense',
+                    'description' => $expense['description'],
+                    'amount_cents' => $expense['amount_cents'],
+                    'game_date' => $dueDate,
+                    'due_date' => $dueDate,
+                    'recurring' => true,
+                    'metadata' => ['day_of_month' => $expense['day_of_month']],
+                ]);
+            }
+
+            return $game->load('company.products', 'company.suppliers.products', 'company.inventoryBalances', 'company.financialEntries');
+        });
+    }
+}

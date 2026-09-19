@@ -1,6 +1,6 @@
 # ERP Game
 
-Jogo de simulação empresarial no navegador, apresentado como um ERP. Este repositório contém apenas a **Fase 0 - Fundação** descrita em [DOCUMENTACAO_COPILOT_ERP_GAME.md](DOCUMENTACAO_COPILOT_ERP_GAME.md).
+Jogo de simulação empresarial no navegador, apresentado como um ERP. As **Fases 0 a 5 do MVP** descritas em [DOCUMENTACAO_COPILOT_ERP_GAME.md](DOCUMENTACAO_COPILOT_ERP_GAME.md) estão implementadas.
 
 ## Stack
 
@@ -39,12 +39,18 @@ Na primeira execução, prepare a aplicação e os assets:
 
 ```bash
 ./vendor/bin/sail artisan key:generate
-./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan migrate --seed
 ./vendor/bin/sail npm ci
 ./vendor/bin/sail npm run build
 ```
 
 A aplicação estará disponível em <http://localhost:8000>.
+
+O seeder local cria uma partida completa para inspeção:
+
+- email: `demo@erpgame.local`;
+- senha: `password`;
+- empresa: `Mercado Aurora`.
 
 ## Desenvolvimento
 
@@ -64,9 +70,9 @@ Comandos de qualidade:
 
 ## Arquitetura
 
-A Fase 0 fornece autenticação e infraestrutura, sem implementar o domínio do jogo. Nas próximas fases, regras de simulação serão organizadas em `app/Domain`, enquanto controllers apenas validarão, autorizarão e delegarão operações. Componentes Vue não serão fonte de verdade para cálculos.
+A criação de partidas fica em `app/Domain/Game/Actions/CreateGame.php`. O avanço transacional fica em `app/Domain/Game/Services/DayProcessor.php`; eventos em `app/Domain/Game/Services/EventEngine.php`; mutações de caixa passam por `app/Domain/Finance/Services/LedgerService.php`. Controllers apenas validam, autorizam, delegam operações e retornam respostas.
 
-Valores monetários serão persistidos e calculados como inteiros em centavos (`BIGINT` no PostgreSQL), nunca como `float`. Datas do jogo serão independentes do relógio do servidor.
+Valores monetários e fatores de demanda são calculados com inteiros, nunca como `float`. Estoque e liquidações de caixa geram movimentos imutáveis. A DRE usa competência; o fluxo de caixa usa a data de liquidação no calendário do jogo. Vendas são à vista no MVP.
 
 ## Banco e serviços
 
@@ -74,6 +80,24 @@ O ambiente local usa PostgreSQL como banco principal. Redis já está preparado 
 
 ## Escopo atual
 
-Incluído nesta fase: framework, frontend Inertia/Vue/TypeScript, Tailwind, autenticação, PostgreSQL, Redis, testes, lint e CI.
+Incluído: partidas, compras, estoque, vendas, financeiro, relatórios, eventos temporários, tutorial, avanço idempotente, vitória por prazo/patrimônio e falência por obrigação sem cobertura.
 
-Não incluído: partidas, empresas, produtos, compras, estoque, finanças, processamento diário ou eventos. Esses itens pertencem às fases seguintes da especificação.
+## Equipe e RH
+
+O módulo de RH permite contratar e desligar funcionários, organizar cargo e departamento e integrar salários recorrentes ao contas a pagar, fluxo de caixa e DRE. Valores salariais são inteiros em centavos e seguem a data do jogo.
+
+O escopo é intencionalmente gerencial: folha detalhada, encargos, benefícios, férias e obrigações legais permanecem fora do MVP.
+
+## Regras de vendas e aleatoriedade
+
+- a demanda natural varia deterministicamente entre 85% e 115% conforme semente, data e SKU;
+- preço abaixo da referência aumenta a demanda e preço acima reduz, limitado aos fatores de 35% e 180%;
+- eventos ativos podem multiplicar demanda e preço de referência sem alterar permanentemente o produto;
+- vendas são limitadas por demanda, estoque disponível e capacidade comercial diária;
+- o gestor possui capacidade base de 5 unidades por dia;
+- funcionários ativos do departamento Comercial adicionam capacidade conforme o cargo: Assistente 8, Analista 14, Coordenador 20 e Gerente 26 unidades base;
+- a produtividade individual varia deterministicamente entre 85% e 115% por dia;
+- prioridade de produtos e vendedores varia por seed, evitando favorecimento fixo;
+- cada unidade vendida é atribuída ao gestor ou a um funcionário comercial para auditoria e indicadores.
+
+Fora do MVP permanecem integrações reais, emissão fiscal, folha detalhada, múltiplos estabelecimentos, multiplayer, concorrentes por IA e os demais itens explicitamente excluídos na especificação.
