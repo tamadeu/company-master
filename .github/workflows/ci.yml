@@ -38,8 +38,8 @@ jobs:
             - name: Configure PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: '8.3'
-                  extensions: mbstring, pdo_pgsql
+                  php-version: '8.4'
+                  extensions: mbstring, pdo_pgsql, redis
                   coverage: none
 
             - name: Configure Node.js

@@ -68,6 +68,38 @@ Comandos de qualidade:
 ./vendor/bin/sail npm run build
 ```
 
+## Deploy no Dokploy
+
+O repositório inclui `nixpacks.toml` e `scripts/start-production.sh`. O build usa PHP 8.4, Node 22, dependências Composer sem pacotes de desenvolvimento e executa migrations automaticamente ao iniciar o container.
+
+No Dokploy, crie serviços PostgreSQL 16 e Redis na mesma rede da aplicação e configure, no mínimo:
+
+```dotenv
+APP_NAME="ERP Game"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://seu-dominio.example
+APP_KEY=base64:CHAVE_GERADA
+
+DB_CONNECTION=pgsql
+DB_HOST=nome-do-servico-postgres
+DB_PORT=5432
+DB_DATABASE=erpgame
+DB_USERNAME=usuario
+DB_PASSWORD=senha-forte
+
+REDIS_CLIENT=phpredis
+REDIS_HOST=nome-do-servico-redis
+REDIS_PORT=6379
+REDIS_PASSWORD=null
+
+SESSION_DRIVER=database
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+```
+
+Gere a chave com `./vendor/bin/sail artisan key:generate --show`. Use `/up` como healthcheck. Como o Dokploy clona o GitHub, alterações locais precisam ser commitadas e enviadas ao repositório antes de um novo deploy.
+
 ## Arquitetura
 
 A criação de partidas fica em `app/Domain/Game/Actions/CreateGame.php`. O avanço transacional fica em `app/Domain/Game/Services/DayProcessor.php`; eventos em `app/Domain/Game/Services/EventEngine.php`; mutações de caixa passam por `app/Domain/Finance/Services/LedgerService.php`. Controllers apenas validam, autorizam, delegam operações e retornam respostas.
