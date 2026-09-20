@@ -67,6 +67,8 @@ test('the owner sees balances and immutable movements in inventory', function ()
             ->component('Inventory/Index')
             ->where('summary.totalUnits', 4)
             ->has('balances', 5)
+            ->has('balances.0.salePriceCents')
+            ->has('balances.0.referencePriceCents')
             ->has('movements', 1));
 });
 

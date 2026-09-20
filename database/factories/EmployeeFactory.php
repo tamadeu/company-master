@@ -13,6 +13,7 @@ class EmployeeFactory extends Factory
     {
         return [
             'company_id' => Company::factory(),
+            'population_npc_id' => null,
             'name' => fake()->name(),
             'department' => fake()->randomElement(config('game.hr.departments')),
             'role' => fake()->randomElement(config('game.hr.roles')),

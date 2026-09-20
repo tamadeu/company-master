@@ -65,6 +65,11 @@ class Company extends Model
         return $this->hasMany(Employee::class);
     }
 
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class);
+    }
+
     protected function casts(): array
     {
         return [

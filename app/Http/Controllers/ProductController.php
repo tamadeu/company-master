@@ -30,6 +30,6 @@ class ProductController extends Controller
 
         $product->update(['sale_price_cents' => $request->integer('sale_price_cents')]);
 
-        return redirect()->route('games.products.index', $game)->with('success', 'Preço atualizado.');
+        return redirect()->route('games.inventory.index', $game)->with('success', 'Preço atualizado.');
     }
 }

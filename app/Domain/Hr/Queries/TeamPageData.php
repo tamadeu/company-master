@@ -2,14 +2,20 @@
 
 namespace App\Domain\Hr\Queries;
 
+use App\Domain\Hr\Services\CandidateRecommendationService;
+use App\Domain\Hr\Services\SalaryMatrixService;
 use App\Domain\Sales\Services\SalesCapacityService;
 use App\Models\Game;
 
 class TeamPageData
 {
-    public function __construct(private readonly SalesCapacityService $salesCapacity) {}
+    public function __construct(
+        private readonly SalesCapacityService $salesCapacity,
+        private readonly CandidateRecommendationService $candidateRecommendations,
+        private readonly SalaryMatrixService $salaryMatrix,
+    ) {}
 
-    public function for(Game $game): array
+    public function for(Game $game, ?string $department = null, ?string $role = null): array
     {
         $game->load(['company.employees.salaryEntries', 'company.employees.saleAttributions']);
         $company = $game->company;
@@ -48,6 +54,7 @@ class TeamPageData
                 ->sortBy([['status', 'asc'], ['name', 'asc']])
                 ->map(fn ($employee) => [
                     'id' => $employee->id,
+                    'populationNpcId' => $employee->population_npc_id,
                     'name' => $employee->name,
                     'department' => $employee->department,
                     'role' => $employee->role,
@@ -66,7 +73,11 @@ class TeamPageData
                 'departments' => config('game.hr.departments'),
                 'roles' => config('game.hr.roles'),
                 'payrollDay' => config('game.hr.payroll_day'),
+                'salaryMatrix' => $this->salaryMatrix->matrix(),
             ],
+            'candidateSuggestions' => $department && $role
+                ? $this->candidateRecommendations->recommend($game, $department, $role)
+                : [],
         ];
     }
 }

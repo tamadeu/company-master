@@ -24,4 +24,9 @@ class SaleItem extends Model
     {
         return $this->hasMany(SaleAttribution::class);
     }
+
+    public function customerPurchases(): HasMany
+    {
+        return $this->hasMany(CustomerPurchase::class);
+    }
 }

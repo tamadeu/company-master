@@ -16,30 +16,32 @@ function hrGame(): Game
     return app(CreateGame::class)->execute(User::factory()->create(), 'Equipe', 'Mercado Aurora', 950);
 }
 
+function hrHireData(Game $game, string $department, string $role, int $offset = 0): array
+{
+    return [
+        'population_npc_id' => $game->populationNpcs()->orderBy('id')->skip($offset)->value('id'),
+        'department' => $department,
+        'role' => $role,
+    ];
+}
+
 test('hiring creates an active employee and a recurring salary payable', function () {
     $game = hrGame();
 
-    $employee = app(HireEmployee::class)->execute($game, [
-        'name' => 'Ana Souza',
-        'department' => 'Comercial',
-        'role' => 'Analista',
-        'monthly_salary_cents' => 350_000,
-    ]);
+    $employee = app(HireEmployee::class)->execute($game, hrHireData($game, 'Comercial', 'Analista'));
 
     $salary = $employee->salaryEntries->first();
     expect($employee->status)->toBe('active')
         ->and($employee->hired_on->toDateString())->toBe('2026-01-01')
-        ->and($salary->amount_cents)->toBe(350_000)
+        ->and($employee->monthly_salary_cents)->toBe(420_000)
+        ->and($salary->amount_cents)->toBe(420_000)
         ->and($salary->due_date->toDateString())->toBe('2026-01-10')
         ->and($salary->reference_id)->toBe($employee->id);
 });
 
 test('an active employee salary schedules the following month', function () {
     $game = hrGame();
-    $employee = app(HireEmployee::class)->execute($game, [
-        'name' => 'Bruno Lima', 'department' => 'Operações', 'role' => 'Assistente',
-        'monthly_salary_cents' => 250_000,
-    ]);
+    $employee = app(HireEmployee::class)->execute($game, hrHireData($game, 'Operações', 'Assistente'));
 
     app(SettleDuePayables::class)->settle($game->company, CarbonImmutable::parse('2026-01-10'));
 
@@ -49,10 +51,7 @@ test('an active employee salary schedules the following month', function () {
 
 test('termination is idempotent and prevents another salary recurrence', function () {
     $game = hrGame();
-    $employee = app(HireEmployee::class)->execute($game, [
-        'name' => 'Carla Reis', 'department' => 'Logística', 'role' => 'Coordenador',
-        'monthly_salary_cents' => 450_000,
-    ]);
+    $employee = app(HireEmployee::class)->execute($game, hrHireData($game, 'Logística', 'Coordenador'));
     app(TerminateEmployee::class)->execute($game, $employee);
     app(TerminateEmployee::class)->execute($game, $employee);
 
@@ -74,15 +73,12 @@ test('an employee from another company cannot be terminated', function () {
 
 test('salary is recognized by the income statement on its competence date', function () {
     $game = hrGame();
-    app(HireEmployee::class)->execute($game, [
-        'name' => 'Elisa Prado', 'department' => 'Administração', 'role' => 'Gerente',
-        'monthly_salary_cents' => 350_000,
-    ]);
+    app(HireEmployee::class)->execute($game, hrHireData($game, 'Administração', 'Gerente'));
 
     $statement = app(IncomeStatementService::class)->calculate(
         $game->company,
         CarbonImmutable::parse('2026-01-10'),
     );
 
-    expect($statement['operatingExpensesCents'])->toBe(2_350_000);
+    expect($statement['operatingExpensesCents'])->toBe(2_800_000);
 });

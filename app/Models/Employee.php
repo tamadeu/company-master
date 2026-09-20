@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[Fillable(['company_id', 'name', 'department', 'role', 'monthly_salary_cents', 'hired_on', 'terminated_on', 'status'])]
+#[Fillable(['company_id', 'population_npc_id', 'name', 'department', 'role', 'monthly_salary_cents', 'hired_on', 'terminated_on', 'status'])]
 class Employee extends Model
 {
     /** @use HasFactory<EmployeeFactory> */
@@ -19,6 +19,11 @@ class Employee extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function populationNpc(): BelongsTo
+    {
+        return $this->belongsTo(PopulationNpc::class);
     }
 
     public function salaryEntries(): MorphMany

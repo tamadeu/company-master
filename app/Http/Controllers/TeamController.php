@@ -9,17 +9,22 @@ use App\Http\Requests\StoreEmployeeRequest;
 use App\Models\Employee;
 use App\Models\Game;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TeamController extends Controller
 {
-    public function index(Game $game, TeamPageData $pageData): Response
+    public function index(Request $request, Game $game, TeamPageData $pageData): Response
     {
         Gate::authorize('view', $game);
 
-        return Inertia::render('Team/Index', $pageData->for($game));
+        return Inertia::render('Team/Index', $pageData->for(
+            $game,
+            $request->string('department')->toString() ?: null,
+            $request->string('role')->toString() ?: null,
+        ));
     }
 
     public function store(StoreEmployeeRequest $request, Game $game, HireEmployee $hireEmployee): RedirectResponse

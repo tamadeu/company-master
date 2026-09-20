@@ -2,6 +2,7 @@
 
 namespace App\Domain\Sales\Services;
 
+use App\Domain\Customers\Services\CustomerAcquisitionService;
 use App\Domain\Finance\Services\LedgerService;
 use App\Domain\Game\Services\DemandCalculator;
 use App\Models\Game;
@@ -13,9 +14,10 @@ class SalesSimulator
         private readonly DemandCalculator $demandCalculator,
         private readonly LedgerService $ledger,
         private readonly SalesCapacityService $salesCapacity,
+        private readonly CustomerAcquisitionService $customerAcquisition,
     ) {}
 
-    /** @return array{sale_id: int, revenue_cents: int, cogs_cents: int, units_sold: int, stockout_product_ids: array<int, int>, commercial_capacity_units: int, unmet_demand_units: int} */
+    /** @return array{sale_id: int, revenue_cents: int, cogs_cents: int, units_sold: int, stockout_product_ids: array<int, int>, commercial_capacity_units: int, unmet_demand_units: int, new_customers: int, customer_purchases: int} */
     public function simulate(Game $game, int $seedUsed, array $eventEffects = []): array
     {
         $company = $game->company;
@@ -30,6 +32,8 @@ class SalesSimulator
         $unitsSold = 0;
         $stockoutProductIds = [];
         $unmetDemandUnits = 0;
+        $newCustomers = 0;
+        $customerPurchases = 0;
         $capacity = $this->salesCapacity->calculate($game, $seedUsed);
         $remainingCapacity = $capacity['total_units'];
         $channels = collect($capacity['channels'])->map(fn (array $channel) => [
@@ -105,6 +109,9 @@ class SalesSimulator
                 $channels[$index]['remaining_units'] -= $attributedQuantity;
                 $quantityToAttribute -= $attributedQuantity;
             }
+            $customerResult = $this->customerAcquisition->attribute($game, $saleItem, $soldQuantity, $seedUsed);
+            $newCustomers += $customerResult['new_customers'];
+            $customerPurchases += $customerResult['customer_purchases'];
             $sale->inventoryMovements()->create([
                 'company_id' => $company->id,
                 'product_id' => $product->id,
@@ -148,6 +155,8 @@ class SalesSimulator
             'stockout_product_ids' => $stockoutProductIds,
             'commercial_capacity_units' => $capacity['total_units'],
             'unmet_demand_units' => $unmetDemandUnits,
+            'new_customers' => $newCustomers,
+            'customer_purchases' => $customerPurchases,
         ];
     }
 }

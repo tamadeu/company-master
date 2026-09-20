@@ -2,14 +2,18 @@
 
 namespace App\Domain\Hr\Actions;
 
+use App\Domain\Hr\Services\SalaryMatrixService;
 use App\Models\Employee;
 use App\Models\Game;
+use App\Models\PopulationNpc;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class HireEmployee
 {
-    /** @param array{name: string, department: string, role: string, monthly_salary_cents: int} $data */
+    public function __construct(private readonly SalaryMatrixService $salaryMatrix) {}
+
+    /** @param array{population_npc_id: int, department: string, role: string} $data */
     public function execute(Game $game, array $data): Employee
     {
         return DB::transaction(function () use ($game, $data) {
@@ -19,8 +23,21 @@ class HireEmployee
             }
 
             $company = $lockedGame->company()->lockForUpdate()->firstOrFail();
+            $npc = PopulationNpc::query()->lockForUpdate()->findOrFail($data['population_npc_id']);
+            if ($npc->game_id !== $lockedGame->id) {
+                throw ValidationException::withMessages(['population_npc_id' => 'Candidato inválido para esta partida.']);
+            }
+
+            if ($company->employees()->where('population_npc_id', $npc->id)->exists()) {
+                throw ValidationException::withMessages(['population_npc_id' => 'Este candidato já foi contratado.']);
+            }
+
             $employee = $company->employees()->create([
-                ...$data,
+                'population_npc_id' => $npc->id,
+                'name' => $npc->name,
+                'department' => $data['department'],
+                'role' => $data['role'],
+                'monthly_salary_cents' => $this->salaryMatrix->salaryCents($data['department'], $data['role']),
                 'hired_on' => $lockedGame->current_date,
                 'status' => 'active',
             ]);

@@ -87,6 +87,8 @@ class DayProcessor
                     'stockout_product_ids' => [],
                     'commercial_capacity_units' => 0,
                     'unmet_demand_units' => 0,
+                    'new_customers' => 0,
+                    'customer_purchases' => 0,
                 ];
             } else {
                 $eventEffects = $this->eventEngine->activeEffects($lockedGame->setRelation('company', $company));
@@ -121,6 +123,8 @@ class DayProcessor
                 'stockout_product_ids' => $sales['stockout_product_ids'],
                 'commercial_capacity_units' => $sales['commercial_capacity_units'],
                 'unmet_demand_units' => $sales['unmet_demand_units'],
+                'new_customers' => $sales['new_customers'],
+                'customer_purchases' => $sales['customer_purchases'],
                 'received_purchase_order_ids' => $receivedOrderIds,
                 'event' => $event ? [
                     'id' => $event->id,

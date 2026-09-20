@@ -86,6 +86,8 @@ Incluído: partidas, compras, estoque, vendas, financeiro, relatórios, eventos 
 
 O módulo de RH permite contratar e desligar funcionários, organizar cargo e departamento e integrar salários recorrentes ao contas a pagar, fluxo de caixa e DRE. Valores salariais são inteiros em centavos e seguem a data do jogo.
 
+A contratação usa um wizard: primeiro o jogador escolhe departamento e cargo; depois recebe três sugestões determinísticas da população. Nome e salário são derivados no servidor. A matriz salarial varia por departamento e progride entre Assistente, Analista, Coordenador, Gerente e Diretor.
+
 O escopo é intencionalmente gerencial: folha detalhada, encargos, benefícios, férias e obrigações legais permanecem fora do MVP.
 
 ## Regras de vendas e aleatoriedade
@@ -99,5 +101,15 @@ O escopo é intencionalmente gerencial: folha detalhada, encargos, benefícios, 
 - a produtividade individual varia deterministicamente entre 85% e 115% por dia;
 - prioridade de produtos e vendedores varia por seed, evitando favorecimento fixo;
 - cada unidade vendida é atribuída ao gestor ou a um funcionário comercial para auditoria e indicadores.
+
+Preços de venda são dados cadastrais do produto e ficam em **Estoque e produtos**. A página **Vendas** é somente operacional: apresenta dias processados, itens, clientes atendidos, responsáveis comerciais e desempenho por produto.
+
+## População e clientes
+
+Cada partida recebe 100 NPCs fictícios e determinísticos. A população armazena somente código, nome, nascimento, gênero, cidade, estado e email interno do jogo. CPF, RG, senha, filiação, endereço e telefones não são persistidos.
+
+NPCs começam como prospects e são promovidos automaticamente para clientes na primeira compra. Toda quantidade e receita de `sale_items` é decomposta em compras vinculadas a clientes. O módulo Clientes apresenta conversão da população, compras, ticket médio, valor vitalício e recorrência.
+
+Cada cliente possui uma página dedicada com recência, frequência, ranking por valor, segmento, produtos preferidos, evolução diária e histórico completo de compras.
 
 Fora do MVP permanecem integrações reais, emissão fiscal, folha detalhada, múltiplos estabelecimentos, multiplayer, concorrentes por IA e os demais itens explicitamente excluídos na especificação.

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Game\Actions;
 
+use App\Domain\Customers\Services\PopulationGenerator;
 use App\Domain\Finance\Services\LedgerService;
 use App\Models\Game;
 use App\Models\User;
@@ -10,7 +11,10 @@ use Illuminate\Support\Facades\DB;
 
 class CreateGame
 {
-    public function __construct(private readonly LedgerService $ledger) {}
+    public function __construct(
+        private readonly LedgerService $ledger,
+        private readonly PopulationGenerator $populationGenerator,
+    ) {}
 
     public function execute(User $user, string $gameName, string $companyName, ?int $seed = null): Game
     {
@@ -89,6 +93,8 @@ class CreateGame
                     'metadata' => ['day_of_month' => $expense['day_of_month']],
                 ]);
             }
+
+            $this->populationGenerator->generate($game);
 
             return $game->load('company.products', 'company.suppliers.products', 'company.inventoryBalances', 'company.financialEntries');
         });

@@ -15,10 +15,9 @@ class StoreEmployeeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:100'],
+            'population_npc_id' => ['required', 'integer', 'exists:population_npcs,id'],
             'department' => ['required', 'string', Rule::in(config('game.hr.departments'))],
             'role' => ['required', 'string', Rule::in(config('game.hr.roles'))],
-            'monthly_salary_cents' => ['required', 'integer', 'min:1', 'max:100000000'],
         ];
     }
 }

@@ -7,6 +7,7 @@ import {
     CalendarDays,
     ChevronDown,
     CircleDollarSign,
+    ContactRound,
     FileChartColumn,
     LayoutDashboard,
     LockKeyhole,
@@ -55,6 +56,7 @@ const availableNavigation = computed(() => {
     return [
         { label: 'Visão geral', icon: LayoutDashboard, href: overviewUrl.value, active: route().current('games.show') },
         { label: 'Vendas', icon: CircleDollarSign, href: route('games.products.index', game.value.id), active: route().current('games.products.*') },
+        { label: 'Clientes', icon: ContactRound, href: route('games.customers.index', game.value.id), active: route().current('games.customers.*') },
         { label: 'Compras', icon: ShoppingCart, href: route('games.purchases.index', game.value.id), active: route().current('games.purchases.*') || route().current('games.purchase-orders.*') },
         { label: 'Estoque', icon: Package, href: route('games.inventory.index', game.value.id), active: route().current('games.inventory.*') },
         { label: 'Financeiro', icon: CircleDollarSign, href: route('games.finance.index', game.value.id), active: route().current('games.finance.*') },

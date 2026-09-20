@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\GameController;
@@ -32,6 +33,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/games/{game}/team', [TeamController::class, 'index'])->name('games.team.index');
     Route::post('/games/{game}/employees', [TeamController::class, 'store'])->name('games.employees.store');
     Route::delete('/games/{game}/employees/{employee}', [TeamController::class, 'terminate'])->name('games.employees.terminate');
+    Route::get('/games/{game}/customers', [CustomerController::class, 'index'])->name('games.customers.index');
+    Route::get('/games/{game}/customers/{customer}', [CustomerController::class, 'show'])->name('games.customers.show');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

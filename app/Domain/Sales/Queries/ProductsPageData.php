@@ -12,8 +12,9 @@ class ProductsPageData
     public function for(Game $game): array
     {
         $game->load([
-            'company.products.inventoryBalances',
-            'company.products.saleItems',
+            'company.sales.items.product',
+            'company.sales.items.customerPurchases',
+            'company.sales.items.attributions.employee',
             'dailySnapshots',
         ]);
         $company = $game->company;
@@ -40,17 +41,49 @@ class ProductsPageData
                 'productivityMaxBasisPoints' => config('game.sales.productivity_max_basis_points'),
                 'latestUnmetDemandUnits' => $latestSnapshot?->summary['unmet_demand_units'] ?? 0,
             ],
-            'products' => $company->products->map(fn ($product) => [
-                'id' => $product->id,
-                'sku' => $product->sku,
-                'name' => $product->name,
-                'salePriceCents' => $product->sale_price_cents,
-                'referencePriceCents' => $product->reference_price_cents,
-                'baseDailyDemand' => $product->base_daily_demand,
-                'stockQuantity' => $product->inventoryBalances->first()?->quantity ?? 0,
-                'unitsSold' => $product->saleItems->sum('quantity'),
-                'revenueCents' => $product->saleItems->sum('revenue_cents'),
+            'summary' => [
+                'revenueCents' => (int) $company->sales->sum('revenue_cents'),
+                'cogsCents' => (int) $company->sales->sum('cogs_cents'),
+                'unitsSold' => (int) $company->sales->flatMap(fn ($sale) => $sale->items)->sum('quantity'),
+                'processedSales' => $company->sales->count(),
+                'customerPurchases' => (int) $company->sales
+                    ->flatMap(fn ($sale) => $sale->items)
+                    ->sum(fn ($item) => $item->customerPurchases->count()),
+            ],
+            'sales' => $company->sales->sortByDesc('game_date')->map(fn ($sale) => [
+                'id' => $sale->id,
+                'date' => $sale->game_date->toDateString(),
+                'revenueCents' => $sale->revenue_cents,
+                'cogsCents' => $sale->cogs_cents,
+                'grossProfitCents' => $sale->revenue_cents - $sale->cogs_cents,
+                'unitsSold' => (int) $sale->items->sum('quantity'),
+                'customerCount' => $sale->items
+                    ->flatMap(fn ($item) => $item->customerPurchases)
+                    ->pluck('customer_id')
+                    ->unique()
+                    ->count(),
+                'items' => $sale->items->map(fn ($item) => [
+                    'productName' => $item->product->name,
+                    'quantity' => $item->quantity,
+                    'unitPriceCents' => $item->unit_price_cents,
+                    'revenueCents' => $item->revenue_cents,
+                    'cogsCents' => $item->cogs_cents,
+                    'customerCount' => $item->customerPurchases->pluck('customer_id')->unique()->count(),
+                    'sellers' => $item->attributions->map(
+                        fn ($attribution) => $attribution->employee?->name ?? 'Gestor',
+                    )->unique()->values(),
+                ])->values(),
             ])->values(),
+            'productPerformance' => $company->sales
+                ->flatMap(fn ($sale) => $sale->items)
+                ->groupBy('product_id')
+                ->map(fn ($items) => [
+                    'productId' => $items->first()->product_id,
+                    'productName' => $items->first()->product->name,
+                    'unitsSold' => (int) $items->sum('quantity'),
+                    'revenueCents' => (int) $items->sum('revenue_cents'),
+                    'grossProfitCents' => (int) $items->sum('revenue_cents') - (int) $items->sum('cogs_cents'),
+                ])->sortByDesc('revenueCents')->values(),
         ];
     }
 }

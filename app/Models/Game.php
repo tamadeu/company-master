@@ -41,6 +41,11 @@ class Game extends Model
         return $this->hasMany(GameEvent::class);
     }
 
+    public function populationNpcs(): HasMany
+    {
+        return $this->hasMany(PopulationNpc::class);
+    }
+
     protected function casts(): array
     {
         return [
