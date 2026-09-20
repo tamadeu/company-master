@@ -13,6 +13,7 @@ import {
     UserMinus,
     UserPlus,
     Users,
+    Warehouse,
     X,
 } from '@lucide/vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -39,6 +40,9 @@ interface TeamSummary {
     nextPayrollCents: number;
     commercialEmployees: number;
     salesCapacityUnits: number;
+    inventoryCapacityUnits: number;
+    inventoryUsedUnits: number;
+    logisticsEmployees: number;
 }
 
 interface Employee {
@@ -179,12 +183,13 @@ const terminateEmployee = () => {
                 </button>
             </div>
 
-            <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Resumo de RH">
+            <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-6" aria-label="Resumo de RH">
                 <article class="rounded-md border border-[#dfe7ee] bg-white p-4 shadow-sm"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#dff7f1] text-[#008b76]"><Users :size="22" /></span><div><div class="text-xs text-[#64798d]">Funcionários ativos</div><div class="text-2xl font-bold text-[#102039]">{{ summary.activeEmployees }}</div></div></div></article>
                 <article class="rounded-md border border-[#dfe7ee] bg-white p-4 shadow-sm"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#e4f0fb] text-[#1769aa]"><BadgeDollarSign :size="22" /></span><div><div class="text-xs text-[#64798d]">Folha mensal ativa</div><div class="text-2xl font-bold text-[#102039]">{{ formatMoney(summary.monthlyPayrollCents) }}</div></div></div></article>
                 <article class="rounded-md border border-[#dfe7ee] bg-white p-4 shadow-sm"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#fff3dd] text-[#b56b00]"><CalendarClock :size="22" /></span><div><div class="text-xs text-[#64798d]">Próxima folha</div><div class="text-lg font-bold text-[#102039]">{{ formatDate(summary.nextPayrollDate) }}</div><div class="text-[11px] text-[#8393a3]">{{ formatMoney(summary.nextPayrollCents) }}</div></div></div></article>
                 <article class="rounded-md border border-[#dfe7ee] bg-white p-4 shadow-sm"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#f0edf8] text-[#6650a4]"><Building2 :size="22" /></span><div><div class="text-xs text-[#64798d]">Departamentos</div><div class="text-2xl font-bold text-[#102039]">{{ activeDepartmentCount }}</div></div></div></article>
                 <article class="rounded-md border border-[#dfe7ee] bg-white p-4 shadow-sm"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#e7f4f8] text-[#27658e]"><Gauge :size="22" /></span><div><div class="text-xs text-[#64798d]">Capacidade comercial</div><div class="text-2xl font-bold text-[#102039]">{{ summary.salesCapacityUnits }} un.</div><div class="text-[11px] text-[#8393a3]">{{ summary.commercialEmployees }} vendedor(es)</div></div></div></article>
+                <article class="rounded-md border border-[#dfe7ee] bg-white p-4 shadow-sm"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#eef3e7] text-[#567b2f]"><Warehouse :size="22" /></span><div><div class="text-xs text-[#64798d]">Capacidade de estoque</div><div class="text-2xl font-bold text-[#102039]">{{ summary.inventoryUsedUnits }} / {{ summary.inventoryCapacityUnits }}</div><div class="text-[11px] text-[#8393a3]">{{ summary.logisticsEmployees }} pessoa(s) em Logística</div></div></div></article>
             </section>
 
             <section class="mt-4 overflow-hidden rounded-md border border-[#dfe7ee] bg-white shadow-sm">

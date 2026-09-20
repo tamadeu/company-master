@@ -3,6 +3,7 @@
 namespace App\Domain\Purchasing\Actions;
 
 use App\Domain\Finance\Services\LedgerService;
+use App\Domain\Inventory\Services\InventoryCapacityService;
 use App\Models\Game;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
@@ -12,7 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class CreatePurchaseOrder
 {
-    public function __construct(private readonly LedgerService $ledger) {}
+    public function __construct(
+        private readonly LedgerService $ledger,
+        private readonly InventoryCapacityService $inventoryCapacity,
+    ) {}
 
     /** @param array<int, array{product_id: int, quantity: int}> $items */
     public function execute(Game $game, Supplier $supplier, array $items): PurchaseOrder
@@ -61,6 +65,7 @@ class CreatePurchaseOrder
             });
 
             $totalCents = $pricedItems->sum('total_cents');
+            $this->inventoryCapacity->assertCanReserve($company, (int) $pricedItems->sum('quantity'));
             $isCashPurchase = $lockedSupplier->payment_term_days === 0;
 
             if ($isCashPurchase && $company->cash_balance_cents < $totalCents) {

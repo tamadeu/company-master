@@ -2,10 +2,13 @@
 
 namespace App\Domain\Inventory\Queries;
 
+use App\Domain\Inventory\Services\InventoryCapacityService;
 use App\Models\Game;
 
 class InventoryPageData
 {
+    public function __construct(private readonly InventoryCapacityService $inventoryCapacity) {}
+
     public function for(Game $game): array
     {
         $game->load([
@@ -14,6 +17,7 @@ class InventoryPageData
         ]);
 
         $company = $game->company;
+        $capacity = $this->inventoryCapacity->calculate($company);
 
         return [
             'game' => [
@@ -32,6 +36,11 @@ class InventoryPageData
                     fn ($balance) => $balance->quantity * $balance->average_cost_cents,
                 ),
                 'productsInStock' => $company->inventoryBalances->where('quantity', '>', 0)->count(),
+                'capacityUnits' => $capacity['capacity_units'],
+                'incomingUnits' => $capacity['incoming_units'],
+                'usedUnits' => $capacity['used_units'],
+                'availableUnits' => $capacity['available_units'],
+                'logisticsEmployees' => $capacity['logistics_employees'],
             ],
             'balances' => $company->inventoryBalances->map(fn ($balance) => [
                 'productId' => $balance->product_id,

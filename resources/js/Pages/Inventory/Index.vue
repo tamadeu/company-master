@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Boxes, CircleDollarSign, History, Package, PackageOpen, Save } from '@lucide/vue';
+import { Boxes, CircleDollarSign, History, Package, PackageOpen, Save, Warehouse } from '@lucide/vue';
 import { Head, router } from '@inertiajs/vue3';
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 interface GameSummary { id: number; currentDate: string; dayNumber: number; victoryDays: number }
 interface CompanySummary { id: number; name: string }
@@ -22,7 +22,7 @@ interface Movement { id: number; productName: string; type: string; quantity: nu
 const props = defineProps<{
     game: GameSummary;
     company: CompanySummary;
-    summary: { totalUnits: number; totalValueCents: number; productsInStock: number };
+    summary: { totalUnits: number; totalValueCents: number; productsInStock: number; capacityUnits: number; incomingUnits: number; usedUnits: number; availableUnits: number; logisticsEmployees: number };
     balances: Balance[];
     movements: Movement[];
 }>();
@@ -35,6 +35,9 @@ const priceInputs = reactive<Record<number, string>>(
 );
 const errors = reactive<Record<number, string>>({});
 const savingProductId = ref<number | null>(null);
+const capacityPercentage = computed(() => props.summary.capacityUnits > 0
+    ? Math.min(100, Math.round((props.summary.usedUnits * 100) / props.summary.capacityUnits))
+    : 0);
 
 const parseCents = (value: string): number | null => {
     const match = value.trim().match(/^(\d+)(?:[,.](\d{1,2}))?$/);
@@ -72,10 +75,11 @@ const savePrice = (product: Balance) => {
         <div class="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             <div class="mb-6"><h1 class="text-3xl font-bold text-[#102039] lg:text-4xl">Estoque e produtos</h1><p class="mt-1 text-sm text-[#657a90]">Cadastre a estratégia comercial dos produtos e acompanhe posição e movimentos.</p></div>
 
-            <section class="grid gap-3 sm:grid-cols-3" aria-label="Resumo do estoque">
+            <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Resumo do estoque">
                 <article class="rounded-md border border-[#dfe7ee] bg-white p-4 shadow-sm"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#dff7f1] text-[#008b76]"><Boxes :size="22" /></span><div><div class="text-xs text-[#64798d]">Unidades em estoque</div><div class="text-2xl font-bold text-[#102039]">{{ summary.totalUnits }}</div></div></div></article>
                 <article class="rounded-md border border-[#dfe7ee] bg-white p-4 shadow-sm"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#e4f0fb] text-[#1769aa]"><Package :size="22" /></span><div><div class="text-xs text-[#64798d]">Produtos com saldo</div><div class="text-2xl font-bold text-[#102039]">{{ summary.productsInStock }}</div></div></div></article>
                 <article class="rounded-md border border-[#dfe7ee] bg-white p-4 shadow-sm"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#fff0e9] text-[#e6653f]"><CircleDollarSign :size="22" /></span><div><div class="text-xs text-[#64798d]">Valor a custo</div><div class="text-2xl font-bold text-[#102039]">{{ formatMoney(summary.totalValueCents) }}</div></div></div></article>
+                <article class="rounded-md border border-[#dfe7ee] bg-white p-4 shadow-sm"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#f0edf8] text-[#6650a4]"><Warehouse :size="22" /></span><div class="min-w-0 flex-1"><div class="text-xs text-[#64798d]">Capacidade logística</div><div class="text-2xl font-bold text-[#102039]">{{ summary.usedUnits }} / {{ summary.capacityUnits }}</div><div class="mt-1 text-[11px] text-[#8393a3]">{{ summary.incomingUnits }} em trânsito · {{ summary.availableUnits }} vagas</div></div></div><div class="mt-3 h-2 overflow-hidden rounded-full bg-[#e8eef3]"><div class="h-full rounded-full" :class="capacityPercentage >= 90 ? 'bg-[#d65737]' : 'bg-[#6650a4]'" :style="{ width: `${capacityPercentage}%` }"></div></div></article>
             </section>
 
             <section class="mt-4 overflow-hidden rounded-md border border-[#dfe7ee] bg-white shadow-sm">

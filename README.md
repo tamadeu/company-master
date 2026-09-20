@@ -102,6 +102,15 @@ O escopo é intencionalmente gerencial: folha detalhada, encargos, benefícios, 
 - prioridade de produtos e vendedores varia por seed, evitando favorecimento fixo;
 - cada unidade vendida é atribuída ao gestor ou a um funcionário comercial para auditoria e indicadores.
 
+## Capacidade de estoque
+
+- a empresa começa com capacidade para 50 unidades físicas, somando todos os produtos;
+- estoque atual e pedidos em trânsito ocupam capacidade;
+- pedidos que ultrapassariam o limite são rejeitados transacionalmente;
+- funcionários ativos de Logística ampliam a capacidade: Assistente +50, Analista +100, Coordenador +200, Gerente +350 e Diretor +500 unidades;
+- o desligamento de um funcionário de Logística é bloqueado quando estoque e pedidos excederiam a capacidade restante;
+- vendas liberam vagas automaticamente ao reduzir o estoque.
+
 Preços de venda são dados cadastrais do produto e ficam em **Estoque e produtos**. A página **Vendas** é somente operacional: apresenta dias processados, itens, clientes atendidos, responsáveis comerciais e desempenho por produto.
 
 ## População e clientes

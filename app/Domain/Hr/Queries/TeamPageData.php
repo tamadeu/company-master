@@ -4,6 +4,7 @@ namespace App\Domain\Hr\Queries;
 
 use App\Domain\Hr\Services\CandidateRecommendationService;
 use App\Domain\Hr\Services\SalaryMatrixService;
+use App\Domain\Inventory\Services\InventoryCapacityService;
 use App\Domain\Sales\Services\SalesCapacityService;
 use App\Models\Game;
 
@@ -13,6 +14,7 @@ class TeamPageData
         private readonly SalesCapacityService $salesCapacity,
         private readonly CandidateRecommendationService $candidateRecommendations,
         private readonly SalaryMatrixService $salaryMatrix,
+        private readonly InventoryCapacityService $inventoryCapacity,
     ) {}
 
     public function for(Game $game, ?string $department = null, ?string $role = null): array
@@ -29,6 +31,7 @@ class TeamPageData
         $nextPayrollDate = $pendingPayroll->first()?->due_date;
         $daySeed = hexdec(substr(hash('sha256', "{$game->seed}:{$game->current_date->toDateString()}"), 0, 8));
         $capacity = $this->salesCapacity->calculate($game, $daySeed);
+        $inventoryCapacity = $this->inventoryCapacity->calculate($company);
 
         return [
             'game' => [
@@ -49,6 +52,9 @@ class TeamPageData
                     : 0,
                 'commercialEmployees' => $capacity['commercial_employee_count'],
                 'salesCapacityUnits' => $capacity['total_units'],
+                'inventoryCapacityUnits' => $inventoryCapacity['capacity_units'],
+                'inventoryUsedUnits' => $inventoryCapacity['used_units'],
+                'logisticsEmployees' => $inventoryCapacity['logistics_employees'],
             ],
             'employees' => $employees
                 ->sortBy([['status', 'asc'], ['name', 'asc']])

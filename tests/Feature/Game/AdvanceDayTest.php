@@ -77,7 +77,7 @@ test('due purchases are received before sales are simulated', function () {
     $supplier = $game->company->suppliers()->where('name', 'Entrega Expressa')->firstOrFail();
     $offer = $supplier->products()->firstOrFail();
     $order = app(CreatePurchaseOrder::class)->execute($game, $supplier, [
-        ['product_id' => $offer->product_id, 'quantity' => 100],
+        ['product_id' => $offer->product_id, 'quantity' => 50],
     ]);
 
     app(AdvanceDay::class)->execute($game, '2026-01-01');

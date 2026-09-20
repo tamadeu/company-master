@@ -2,6 +2,7 @@
 
 namespace App\Domain\Inventory\Actions;
 
+use App\Domain\Inventory\Services\InventoryCapacityService;
 use App\Models\Game;
 use App\Models\InventoryBalance;
 use App\Models\PurchaseOrder;
@@ -10,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class ReceivePurchaseOrder
 {
+    public function __construct(private readonly InventoryCapacityService $inventoryCapacity) {}
+
     public function execute(Game $game, PurchaseOrder $purchaseOrder): PurchaseOrder
     {
         return DB::transaction(function () use ($game, $purchaseOrder) {
@@ -28,6 +31,8 @@ class ReceivePurchaseOrder
             if ($order->status !== 'ordered' || $lockedGame->current_date->isBefore($order->expected_delivery_date)) {
                 throw ValidationException::withMessages(['purchase_order' => 'Este pedido ainda não pode ser recebido.']);
             }
+
+            $this->inventoryCapacity->assertWithinCapacity($company);
 
             foreach ($order->items as $item) {
                 $balance = InventoryBalance::query()

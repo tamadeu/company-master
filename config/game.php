@@ -43,6 +43,16 @@ return [
             'Diretor' => 34,
         ],
     ],
+    'inventory' => [
+        'base_capacity_units' => 50,
+        'capacity_by_logistics_role' => [
+            'Assistente' => 50,
+            'Analista' => 100,
+            'Coordenador' => 200,
+            'Gerente' => 350,
+            'Diretor' => 500,
+        ],
+    ],
     'population' => [
         'size' => 100,
         'first_names' => [

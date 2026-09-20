@@ -62,10 +62,19 @@ interface Order {
     items: OrderItem[];
 }
 
+interface InventoryCapacity {
+    capacityUnits: number;
+    stockUnits: number;
+    incomingUnits: number;
+    usedUnits: number;
+    availableUnits: number;
+}
+
 const props = defineProps<{
     game: GameSummary;
     company: CompanySummary;
     cashBalanceCents: number;
+    inventoryCapacity: InventoryCapacity;
     suppliers: Supplier[];
     orders: Order[];
 }>();
@@ -87,6 +96,11 @@ const orderTotalCents = computed(() => selectedSupplier.value?.offers.reduce(
     (total, offer) => total + (offer.costCents * (quantities[offer.productId] ?? 0)),
     0,
 ) ?? 0);
+const orderUnits = computed(() => selectedSupplier.value?.offers.reduce(
+    (total, offer) => total + (quantities[offer.productId] ?? 0),
+    0,
+) ?? 0);
+const exceedsCapacity = computed(() => orderUnits.value > props.inventoryCapacity.availableUnits);
 
 const moneyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatMoney = (cents: number) => moneyFormatter.format(cents / 100);
@@ -198,10 +212,13 @@ const receiveOrder = (order: Order) => {
                         <div class="flex justify-between text-[#64798d]"><span>Caixa disponível</span><strong class="text-[#263e56]">{{ formatMoney(cashBalanceCents) }}</strong></div>
                         <div class="flex justify-between text-[#64798d]"><span>Entrega prevista</span><strong class="text-[#263e56]">{{ selectedSupplier.leadTimeDays }} dia(s)</strong></div>
                         <div class="flex justify-between text-[#64798d]"><span>Pagamento</span><strong class="text-[#263e56]">{{ selectedSupplier.paymentTermDays === 0 ? 'À vista' : `${selectedSupplier.paymentTermDays} dias` }}</strong></div>
+                        <div class="flex justify-between text-[#64798d]"><span>Vagas disponíveis</span><strong :class="exceedsCapacity ? 'text-[#d65737]' : 'text-[#263e56]'">{{ inventoryCapacity.availableUnits }}</strong></div>
+                        <div class="flex justify-between text-[#64798d]"><span>Unidades do pedido</span><strong :class="exceedsCapacity ? 'text-[#d65737]' : 'text-[#263e56]'">{{ orderUnits }}</strong></div>
                     </div>
                     <div class="mt-5 flex items-end justify-between border-t border-[#e6edf2] pt-5"><span class="text-sm text-[#64798d]">Total</span><strong class="text-2xl text-[#102039]">{{ formatMoney(orderTotalCents) }}</strong></div>
+                    <p v-if="exceedsCapacity" class="mt-3 text-xs text-red-600">Reduza o pedido ou contrate alguém de Logística para ampliar o estoque.</p>
                     <p v-if="localError || form.errors.items || form.errors.supplier_id" class="mt-3 text-xs text-red-600">{{ localError || form.errors.items || form.errors.supplier_id }}</p>
-                    <button type="button" :disabled="form.processing || orderTotalCents === 0" class="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#ef654f] px-4 text-sm font-bold text-white disabled:opacity-50" @click="submitOrder"><ShoppingCart :size="17" /> {{ form.processing ? 'Criando...' : 'Criar pedido' }}</button>
+                    <button type="button" :disabled="form.processing || orderTotalCents === 0 || exceedsCapacity" class="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#ef654f] px-4 text-sm font-bold text-white disabled:opacity-50" @click="submitOrder"><ShoppingCart :size="17" /> {{ form.processing ? 'Criando...' : 'Criar pedido' }}</button>
                 </aside>
             </section>
 
