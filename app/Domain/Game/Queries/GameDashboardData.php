@@ -22,7 +22,9 @@ class GameDashboardData
             'company.products.inventoryBalances',
             'company.suppliers.products.product',
             'company.financialEntries',
-            'company.sales',
+            'company.purchaseOrders.items',
+            'company.purchaseOrders.supplier',
+            'company.sales.items.product',
             'dailySnapshots',
             'events',
         ]);
@@ -47,6 +49,19 @@ class GameDashboardData
             ->where('status', 'active')
             ->first(fn ($event) => $event->starts_on->lessThanOrEqualTo($game->current_date)
                 && $event->ends_on->greaterThanOrEqualTo($game->current_date));
+        $salesSince = $game->current_date->copy()->subDays(29);
+        $salesByProduct = $company->sales
+            ->filter(fn ($sale) => $sale->game_date->betweenIncluded($salesSince, $game->current_date))
+            ->flatMap->items
+            ->groupBy('product_id')
+            ->map(fn ($items) => [
+                'productId' => $items->first()->product_id,
+                'productName' => $items->first()->product->name,
+                'revenueCents' => $items->sum('revenue_cents'),
+                'unitsSold' => $items->sum('quantity'),
+            ])
+            ->sortByDesc('revenueCents')
+            ->values();
 
         return [
             'games' => $user->games()
@@ -102,6 +117,18 @@ class GameDashboardData
                 'reliabilityPercent' => $supplier->reliability_percent,
                 'lowestOfferCents' => $supplier->products->min('cost_cents'),
             ]),
+            'upcomingDeliveries' => $company->purchaseOrders
+                ->where('status', 'ordered')
+                ->sortBy('expected_delivery_date')
+                ->take(4)
+                ->map(fn ($order) => [
+                    'id' => $order->id,
+                    'supplierName' => $order->supplier->name,
+                    'expectedDeliveryDate' => $order->expected_delivery_date->toDateString(),
+                    'units' => $order->items->sum('quantity'),
+                    'totalCents' => $order->total_cents,
+                ])->values(),
+            'salesByProduct' => $salesByProduct,
             'mission' => [
                 'stockPurchased' => $company->inventoryBalances->sum('quantity') > 0,
                 'firstDayCompleted' => $dayNumber > 1,

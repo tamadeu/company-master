@@ -31,8 +31,8 @@ return [
         'dispatch_batch_size' => (int) env('GAME_IDLE_SALES_BATCH_SIZE', 100),
     ],
     'victory' => [
-        'days' => 180,
-        'equity_cents' => 20_000_000,
+        'days' => 365,
+        'equity_cents' => 100_000_000,
     ],
     'office_locations' => [
         'neighborhood' => [

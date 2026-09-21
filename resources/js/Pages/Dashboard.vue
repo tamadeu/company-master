@@ -8,7 +8,6 @@ import {
     Building2,
     Check,
     CircleDollarSign,
-    Landmark,
     MapPin,
     Flame,
     PackageOpen,
@@ -143,6 +142,21 @@ interface ActiveEvent {
     endsOn: string;
 }
 
+interface UpcomingDelivery {
+    id: number;
+    supplierName: string;
+    expectedDeliveryDate: string;
+    units: number;
+    totalCents: number;
+}
+
+interface ProductSales {
+    productId: number;
+    productName: string;
+    revenueCents: number;
+    unitsSold: number;
+}
+
 const props = defineProps<{
     games: GameListItem[];
     game: GameSummary | null;
@@ -154,6 +168,8 @@ const props = defineProps<{
     tutorial: { completed: boolean };
     activeEvent: ActiveEvent | null;
     dailyHistory: DailyHistoryItem[];
+    upcomingDeliveries: UpcomingDelivery[];
+    salesByProduct: ProductSales[];
     manualAdvanceEnabled: boolean;
     officeLocations: OfficeLocation[];
     difficulties: Difficulty[];
@@ -203,6 +219,68 @@ const missionProgress = computed(() => {
     return [props.mission.stockPurchased, props.mission.firstDayCompleted].filter(Boolean).length;
 });
 
+const cashFlowSeries = computed(() => props.dailyHistory.map((item) => ({
+    date: item.date,
+    income: item.revenueCents,
+    expense: Math.max(0, item.revenueCents - item.cashChangeCents),
+    balance: item.cashBalanceCents ?? 0,
+})));
+const hoveredChartIndex = ref<number | null>(null);
+const chartFlowMax = computed(() => Math.max(1, ...cashFlowSeries.value.flatMap((item) => [item.income, item.expense])));
+const chartBalanceMin = computed(() => Math.min(...cashFlowSeries.value.map((item) => item.balance)));
+const chartBalanceMax = computed(() => Math.max(1, ...cashFlowSeries.value.map((item) => item.balance)));
+const chartX = (index: number) => {
+    const denominator = Math.max(1, cashFlowSeries.value.length - 1);
+
+    return 28 + (index * 704) / denominator;
+};
+const chartY = (value: number, key: 'income' | 'expense' | 'balance') => {
+    if (key === 'balance') {
+        const range = Math.max(1, chartBalanceMax.value - chartBalanceMin.value);
+
+        return 190 - ((value - chartBalanceMin.value) * 160) / range;
+    }
+
+    return 190 - (value * 160) / chartFlowMax.value;
+};
+const chartPoints = (key: 'income' | 'expense' | 'balance') => cashFlowSeries.value
+    .map((item, index) => `${chartX(index).toFixed(1)},${chartY(item[key], key).toFixed(1)}`)
+    .join(' ');
+const hoveredChartPoint = computed(() => hoveredChartIndex.value === null
+    ? null
+    : cashFlowSeries.value[hoveredChartIndex.value] ?? null);
+const updateChartHover = (event: PointerEvent) => {
+    const bounds = (event.currentTarget as SVGElement).getBoundingClientRect();
+    const relativeX = Math.max(0, Math.min(bounds.width, event.clientX - bounds.left));
+    const index = Math.round((relativeX / bounds.width) * Math.max(0, cashFlowSeries.value.length - 1));
+
+    hoveredChartIndex.value = index;
+};
+const chartDateLabels = computed(() => {
+    if (props.dailyHistory.length <= 3) {
+        return props.dailyHistory;
+    }
+
+    const middleIndex = Math.floor((props.dailyHistory.length - 1) / 2);
+
+    return [props.dailyHistory[0], props.dailyHistory[middleIndex], props.dailyHistory.at(-1)]
+        .filter((item): item is DailyHistoryItem => item !== undefined);
+});
+const maxProductRevenue = computed(() => Math.max(1, ...props.salesByProduct.map((item) => item.revenueCents)));
+const deliveryLabel = (date: string) => {
+    if (!props.game) {
+        return '';
+    }
+
+    const difference = Math.round((new Date(`${date}T00:00:00`).getTime() - new Date(`${props.game.currentDate}T00:00:00`).getTime()) / 86_400_000);
+
+    if (difference < 0) return 'Atrasada';
+    if (difference === 0) return 'Hoje';
+    if (difference === 1) return 'Amanhã';
+
+    return `Em ${difference} dias`;
+};
+
 const metricCards = computed(() => {
     if (!props.metrics) {
         return [];
@@ -216,7 +294,6 @@ const metricCards = computed(() => {
     ];
 });
 
-const historyMaxRevenue = computed(() => Math.max(1, ...props.dailyHistory.map((item) => item.revenueCents)));
 const advanceError = computed(() => Object.values(advanceForm.errors)[0] ?? '');
 
 watch(() => props.game?.currentDate, (currentDate) => {
@@ -302,34 +379,57 @@ const completeTutorial = () => {
                     </article>
                 </section>
 
-                <section v-if="activeEvent" class="mt-4 flex flex-col gap-4 rounded-md border border-[#f3c9a7] bg-[#fff7ee] p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex items-start gap-3"><span class="grid size-11 shrink-0 place-items-center rounded-md bg-[#ffe4ce] text-[#d65c2f]"><Flame :size="22" /></span><div><div class="text-xs font-bold uppercase text-[#c45027]">Evento ativo</div><h2 class="mt-0.5 font-bold text-[#19324d]">{{ activeEvent.title }}</h2><p class="mt-1 text-sm text-[#6b7f93]">{{ activeEvent.description }}</p><p v-if="activeEvent.payload.product_name" class="mt-1 text-xs font-semibold text-[#c45027]">{{ activeEvent.payload.product_name }}</p></div></div>
-                    <div class="text-xs text-[#6b7f93]">Até {{ formatDate(activeEvent.endsOn) }}</div>
-                </section>
-
-                <section class="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
-                    <div class="rounded-md border border-[#dfe7ee] bg-white shadow-sm">
+                <section class="mt-4 grid gap-4 xl:grid-cols-[1.7fr_1fr]">
+                    <div class="min-w-0 rounded-md border border-[#dfe7ee] bg-white shadow-sm">
                         <div class="flex items-center justify-between border-b border-[#e6edf2] px-5 py-4">
                             <div class="flex items-center gap-2 text-sm font-bold text-[#19324d]">
-                                <Landmark :size="19" class="text-[#1769aa]" />
-                                Fundação financeira
+                                <TrendingUp :size="19" class="text-[#1769aa]" />
+                                Fluxo de caixa
                             </div>
-                            <span class="text-xs text-[#75899c]">Últimos {{ dailyHistory.length }} dia(s)</span>
-                        </div>
-                        <div v-if="dailyHistory.length" class="space-y-3 px-5 py-5">
-                            <div v-for="item in dailyHistory.slice(-7)" :key="item.date" class="grid grid-cols-[5rem_1fr_auto] items-center gap-3">
-                                <span class="text-xs text-[#6e8296]">{{ formatDate(item.date) }}</span>
-                                <div class="h-2 overflow-hidden rounded-full bg-[#e8eef3]"><div class="h-full rounded-full bg-[#19b6a5]" :style="{ width: `${Math.max(2, Math.round((item.revenueCents * 100) / historyMaxRevenue))}%` }"></div></div>
-                                <div class="min-w-24 text-right"><div class="text-xs font-bold text-[#263e56]">{{ formatMoney(item.revenueCents) }}</div><div class="text-[10px]" :class="item.cashChangeCents >= 0 ? 'text-[#16836f]' : 'text-[#d65737]'">{{ item.cashChangeCents >= 0 ? '+' : '' }}{{ formatMoney(item.cashChangeCents) }}</div></div>
+                            <div class="flex items-center gap-4 text-[11px] text-[#6f8397]">
+                                <span class="flex items-center gap-1.5"><span class="size-2 rounded-full bg-[#1769aa]"></span>Entradas</span>
+                                <span class="flex items-center gap-1.5"><span class="size-2 rounded-full bg-[#19b6a5]"></span>Saídas</span>
+                                <span class="flex items-center gap-1.5"><span class="size-2 rounded-full bg-[#9bc7e2]"></span>Saldo</span>
                             </div>
                         </div>
-                        <div v-else class="grid min-h-64 place-items-center px-6 py-10 text-center">
+                        <div v-if="dailyHistory.length" class="px-4 pb-4 pt-3 sm:px-5">
+                            <div class="flex items-center justify-between px-2 text-[10px] font-medium text-[#8393a3]">
+                                <span>Fluxos até {{ formatMoney(chartFlowMax) }}</span>
+                                <span>Saldo de {{ formatMoney(chartBalanceMin) }} a {{ formatMoney(chartBalanceMax) }}</span>
+                            </div>
+                            <div class="relative mt-1">
+                            <svg class="h-[250px] w-full touch-none" viewBox="0 0 760 220" role="img" aria-label="Entradas, saídas e saldo dos últimos 30 dias" preserveAspectRatio="none" @pointermove="updateChartHover" @pointerleave="hoveredChartIndex = null">
+                                <line v-for="position in [30, 70, 110, 150, 190]" :key="position" x1="28" :y1="position" x2="732" :y2="position" stroke="#e8eef3" stroke-width="1" />
+                                <polyline :points="chartPoints('balance')" fill="none" stroke="#9bc7e2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                                <polyline :points="chartPoints('income')" fill="none" stroke="#1769aa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                                <polyline :points="chartPoints('expense')" fill="none" stroke="#19b6a5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                                <template v-if="hoveredChartIndex !== null && hoveredChartPoint">
+                                    <line :x1="chartX(hoveredChartIndex)" y1="30" :x2="chartX(hoveredChartIndex)" y2="190" stroke="#526980" stroke-width="1" stroke-dasharray="4 4" />
+                                    <circle :cx="chartX(hoveredChartIndex)" :cy="chartY(hoveredChartPoint.income, 'income')" r="5" fill="#1769aa" stroke="white" stroke-width="2" />
+                                    <circle :cx="chartX(hoveredChartIndex)" :cy="chartY(hoveredChartPoint.expense, 'expense')" r="5" fill="#19b6a5" stroke="white" stroke-width="2" />
+                                    <circle :cx="chartX(hoveredChartIndex)" :cy="chartY(hoveredChartPoint.balance, 'balance')" r="5" fill="#9bc7e2" stroke="white" stroke-width="2" />
+                                </template>
+                            </svg>
+                            <div v-if="hoveredChartIndex !== null && hoveredChartPoint" class="pointer-events-none absolute top-2 z-10 min-w-40 rounded-md border border-[#d7e2ea] bg-white px-3 py-2 shadow-lg" :class="hoveredChartIndex === 0 ? '' : hoveredChartIndex === cashFlowSeries.length - 1 ? '-translate-x-full' : '-translate-x-1/2'" :style="{ left: `${(chartX(hoveredChartIndex) / 760) * 100}%` }">
+                                <div class="mb-1.5 text-xs font-bold text-[#263e56]">{{ formatDate(hoveredChartPoint.date) }}</div>
+                                <div class="space-y-1 text-[11px]">
+                                    <div class="flex justify-between gap-4 text-[#1769aa]"><span>Entradas</span><strong>{{ formatMoney(hoveredChartPoint.income) }}</strong></div>
+                                    <div class="flex justify-between gap-4 text-[#159a8c]"><span>Saídas</span><strong>{{ formatMoney(hoveredChartPoint.expense) }}</strong></div>
+                                    <div class="flex justify-between gap-4 text-[#628aa4]"><span>Saldo</span><strong>{{ formatMoney(hoveredChartPoint.balance) }}</strong></div>
+                                </div>
+                            </div>
+                            </div>
+                            <div class="flex justify-between px-2 text-[11px] text-[#718599]">
+                                <span v-for="item in chartDateLabels" :key="item.date">{{ formatDate(item.date) }}</span>
+                            </div>
+                        </div>
+                        <div v-else class="grid min-h-[290px] place-items-center px-6 py-10 text-center">
                             <div class="max-w-md">
                                 <span class="mx-auto grid size-14 place-items-center rounded-full bg-[#e9f2f8] text-[#27658e]">
                                     <TrendingUp :size="27" />
                                 </span>
                                 <h2 class="mt-4 text-lg font-bold text-[#19324d]">Seu histórico começa agora</h2>
-                                <p class="mt-2 text-sm leading-6 text-[#708398]">O fluxo de caixa será preenchido conforme sua empresa registrar operações e avançar na simulação.</p>
+                                <p class="mt-2 text-sm leading-6 text-[#708398]">Entradas, saídas e saldo aparecerão aqui conforme a empresa operar.</p>
                             </div>
                         </div>
                     </div>
@@ -373,45 +473,62 @@ const completeTutorial = () => {
                                 </div>
                             </div>
                         </div>
+
+                        <div v-if="activeEvent" class="mt-5 flex gap-3 rounded-md border border-[#f3c9a7] bg-[#fff7ee] p-4">
+                            <span class="grid size-9 shrink-0 place-items-center rounded-md bg-[#ffe4ce] text-[#d65c2f]"><Flame :size="19" /></span>
+                            <div class="min-w-0">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="text-[11px] font-bold uppercase text-[#c45027]">Evento ativo</div>
+                                    <span class="shrink-0 text-[10px] text-[#7a8997]">Até {{ formatDate(activeEvent.endsOn) }}</span>
+                                </div>
+                                <div class="mt-0.5 text-sm font-bold text-[#19324d]">{{ activeEvent.title }}</div>
+                                <p class="mt-1 text-xs leading-5 text-[#6b7f93]">{{ activeEvent.description }}</p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
-                <section class="mt-4 grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-                    <div class="overflow-hidden rounded-md border border-[#dfe7ee] bg-white shadow-sm">
+                <section class="mt-4 grid gap-4 lg:grid-cols-2">
+                    <div class="min-w-0 rounded-md border border-[#dfe7ee] bg-white shadow-sm">
                         <div class="flex items-center justify-between border-b border-[#e6edf2] px-5 py-4">
-                            <div class="flex items-center gap-2 text-sm font-bold text-[#19324d]"><PackageOpen :size="19" class="text-[#e6653f]" /> Produtos iniciais</div>
-                            <span class="text-xs text-[#75899c]">{{ products.length }} cadastrados</span>
+                            <div class="flex items-center gap-2 text-sm font-bold text-[#19324d]"><Truck :size="19" class="text-[#1769aa]" /> Próximas entregas</div>
+                            <Link :href="route('games.purchases.index', game.id)" class="inline-flex items-center gap-1 text-xs font-semibold text-[#1769aa] hover:text-[#0f517f]">Ver compras <ArrowRight :size="14" /></Link>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full min-w-[620px] text-left">
-                                <thead class="bg-[#f8fafc] text-[11px] uppercase text-[#74879a]">
-                                    <tr><th class="px-5 py-3 font-semibold">Produto</th><th class="px-4 py-3 font-semibold">Preço</th><th class="px-4 py-3 font-semibold">Demanda base</th><th class="px-5 py-3 text-right font-semibold">Estoque</th></tr>
-                                </thead>
-                                <tbody class="divide-y divide-[#edf1f4]">
-                                    <tr v-for="product in products" :key="product.id" class="text-sm">
-                                        <td class="px-5 py-3.5"><div class="font-semibold text-[#263e56]">{{ product.name }}</div><div class="text-[11px] text-[#8a99a8]">{{ product.sku }}</div></td>
-                                        <td class="px-4 py-3.5 font-medium text-[#263e56]">{{ formatMoney(product.salePriceCents) }}</td>
-                                        <td class="px-4 py-3.5 text-[#61758a]">{{ product.baseDailyDemand }} un./dia</td>
-                                        <td class="px-5 py-3.5 text-right"><span class="rounded bg-[#fff0e9] px-2 py-1 text-xs font-bold text-[#d65737]">{{ product.stockQuantity }} un.</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div v-if="upcomingDeliveries.length" class="divide-y divide-[#edf1f4]">
+                            <div v-for="delivery in upcomingDeliveries" :key="delivery.id" class="flex items-center gap-3 px-5 py-3.5">
+                                <span class="grid size-10 shrink-0 place-items-center rounded-md bg-[#e9f2f8] text-[#27658e]"><Truck :size="19" /></span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="truncate text-sm font-bold text-[#263e56]">{{ delivery.supplierName }}</div>
+                                    <div class="mt-0.5 text-xs text-[#75899c]">{{ delivery.units }} itens · {{ formatMoney(delivery.totalCents) }}</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-[11px] text-[#75899c]">{{ formatDate(delivery.expectedDeliveryDate) }}</div>
+                                    <span class="mt-1 inline-block rounded bg-[#e4f0fb] px-2 py-0.5 text-[10px] font-bold text-[#1769aa]">{{ deliveryLabel(delivery.expectedDeliveryDate) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="grid min-h-48 place-items-center px-6 py-8 text-center">
+                            <div><Truck :size="28" class="mx-auto text-[#9aabb9]" /><p class="mt-3 text-sm font-semibold text-[#526a80]">Nenhuma entrega programada</p><p class="mt-1 text-xs text-[#8393a3]">Pedidos em trânsito aparecerão aqui.</p></div>
                         </div>
                     </div>
 
-                    <div class="rounded-md border border-[#dfe7ee] bg-white shadow-sm">
+                    <div class="min-w-0 rounded-md border border-[#dfe7ee] bg-white shadow-sm">
                         <div class="flex items-center justify-between border-b border-[#e6edf2] px-5 py-4">
-                            <div class="flex items-center gap-2 text-sm font-bold text-[#19324d]"><Truck :size="19" class="text-[#1769aa]" /> Fornecedores</div>
-                            <span class="text-xs text-[#75899c]">{{ suppliers.length }} opções</span>
+                            <div class="flex items-center gap-2 text-sm font-bold text-[#19324d]"><Boxes :size="19" class="text-[#1769aa]" /> Vendas por produto</div>
+                            <Link :href="route('games.products.index', game.id)" class="inline-flex items-center gap-1 text-xs font-semibold text-[#1769aa] hover:text-[#0f517f]">Ver vendas <ArrowRight :size="14" /></Link>
                         </div>
-                        <div class="divide-y divide-[#edf1f4]">
-                            <div v-for="supplier in suppliers" :key="supplier.id" class="p-4">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div><div class="text-sm font-bold text-[#263e56]">{{ supplier.name }}</div><div class="mt-0.5 text-xs text-[#75899c]">{{ supplier.profile }} · entrega em {{ supplier.leadTimeDays }} dia(s)</div></div>
-                                    <span class="rounded bg-[#e4f0fb] px-2 py-1 text-[11px] font-bold text-[#1769aa]">{{ supplier.reliabilityPercent }}%</span>
+                        <div v-if="salesByProduct.length" class="space-y-4 px-5 py-5">
+                            <div v-for="productSale in salesByProduct.slice(0, 6)" :key="productSale.productId" class="grid grid-cols-[minmax(7rem,0.8fr)_minmax(8rem,1.3fr)_auto] items-center gap-3">
+                                <div class="min-w-0">
+                                    <div class="truncate text-xs font-semibold text-[#263e56]">{{ productSale.productName }}</div>
+                                    <div class="text-[10px] text-[#8a99a8]">{{ productSale.unitsSold }} un.</div>
                                 </div>
-                                <div class="mt-3 flex items-center justify-between text-xs text-[#61758a]"><span>Menor oferta: <strong class="text-[#263e56]">{{ formatMoney(supplier.lowestOfferCents) }}</strong></span><span>{{ supplier.paymentTermDays === 0 ? 'À vista' : `${supplier.paymentTermDays} dias` }}</span></div>
+                                <div class="h-2.5 overflow-hidden rounded-sm bg-[#e8eef3]"><div class="h-full rounded-sm bg-[#19b6a5]" :style="{ width: `${Math.max(3, Math.round((productSale.revenueCents * 100) / maxProductRevenue))}%` }"></div></div>
+                                <div class="min-w-20 text-right text-xs font-bold text-[#31506d]">{{ formatMoney(productSale.revenueCents) }}</div>
                             </div>
+                        </div>
+                        <div v-else class="grid min-h-48 place-items-center px-6 py-8 text-center">
+                            <div><Boxes :size="28" class="mx-auto text-[#9aabb9]" /><p class="mt-3 text-sm font-semibold text-[#526a80]">Nenhuma venda registrada</p><p class="mt-1 text-xs text-[#8393a3]">O desempenho dos produtos aparecerá aqui.</p></div>
                         </div>
                     </div>
                 </section>
