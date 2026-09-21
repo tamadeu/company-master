@@ -70,7 +70,9 @@ Comandos de qualidade:
 
 ## Deploy no Dokploy
 
-O repositório inclui `nixpacks.toml` e `scripts/start-production.sh`. O build usa PHP 8.4, Node 22, dependências Composer sem pacotes de desenvolvimento e executa migrations automaticamente ao iniciar o container.
+O método recomendado é selecionar **Dockerfile** como build type no Dokploy, com contexto `/` e arquivo `Dockerfile`. A imagem multi-stage usa PHP 8.4 com FrankenPHP, Node 22 apenas no build, dependências Composer sem pacotes de desenvolvimento e porta interna `8080`. Migrations e caches são executados automaticamente ao iniciar o container.
+
+O `nixpacks.toml` continua disponível como alternativa, mas não deve ser usado junto com o Dockerfile no mesmo deploy.
 
 No Dokploy, crie serviços PostgreSQL 16 e Redis na mesma rede da aplicação e configure, no mínimo:
 
@@ -98,7 +100,7 @@ CACHE_STORE=redis
 QUEUE_CONNECTION=redis
 ```
 
-Gere a chave com `./vendor/bin/sail artisan key:generate --show`. Use `/up` como healthcheck. Como o Dokploy clona o GitHub, alterações locais precisam ser commitadas e enviadas ao repositório antes de um novo deploy.
+Gere a chave com `./vendor/bin/sail artisan key:generate --show`. No Dokploy, configure a porta `8080` e use `/up` como healthcheck. Como o Dokploy clona o GitHub, alterações locais precisam ser commitadas e enviadas ao repositório antes de um novo deploy.
 
 ## Administração
 
