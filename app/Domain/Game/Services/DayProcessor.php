@@ -4,6 +4,7 @@ namespace App\Domain\Game\Services;
 
 use App\Domain\Finance\Services\SettleDuePayables;
 use App\Domain\Finance\Services\SettleDueReceivables;
+use App\Domain\Inbox\Services\InboxService;
 use App\Domain\Inventory\Actions\ReceivePurchaseOrder;
 use App\Domain\Sales\Services\SalesSimulator;
 use App\Models\DailySnapshot;
@@ -22,6 +23,7 @@ class DayProcessor
         private readonly SalesSimulator $salesSimulator,
         private readonly EventEngine $eventEngine,
         private readonly GameOutcomeService $outcomes,
+        private readonly InboxService $inbox,
     ) {}
 
     public function process(Game $game, string $expectedDate): array
@@ -104,6 +106,50 @@ class DayProcessor
             );
             $completedDays = abs((int) $lockedGame->current_date->diffInDays(config('game.initial_date'))) + 1;
             $outcome = $this->outcomes->evaluate($lockedGame->setRelation('company', $company), $completedDays);
+            $gameUrl = "/games/{$lockedGame->id}";
+
+            if ($receivedOrderIds !== []) {
+                $count = count($receivedOrderIds);
+                $this->inbox->sendSystem(
+                    $lockedGame->user,
+                    'operation',
+                    'Mercadoria recebida',
+                    $count === 1 ? 'Um pedido de compra foi recebido e incorporado ao estoque.' : "{$count} pedidos de compra foram recebidos e incorporados ao estoque.",
+                    $gameUrl,
+                );
+            }
+
+            if ($payments['insufficient']) {
+                $this->inbox->sendSystem(
+                    $lockedGame->user,
+                    'alert',
+                    'Caixa insuficiente',
+                    'A empresa não conseguiu liquidar todas as obrigações do dia. Revise o financeiro antes de avançar novamente.',
+                    $gameUrl,
+                );
+            }
+
+            if ($event) {
+                $this->inbox->sendSystem(
+                    $lockedGame->user,
+                    'event',
+                    $event->title,
+                    $event->description,
+                    $gameUrl,
+                );
+            }
+
+            if ($outcome['status'] !== 'active') {
+                $this->inbox->sendSystem(
+                    $lockedGame->user,
+                    'outcome',
+                    $outcome['status'] === 'won' ? 'Objetivo alcançado' : 'Partida encerrada por falência',
+                    $outcome['status'] === 'won'
+                        ? 'Sua empresa atingiu as condições de vitória. Confira o resultado final.'
+                        : 'A empresa não conseguiu manter suas obrigações. Confira o resultado final da partida.',
+                    $gameUrl,
+                );
+            }
             $eventExpenseCents = $event?->type === 'emergency_maintenance' && $event->payload['settled']
                 ? $event->payload['amount_cents']
                 : 0;

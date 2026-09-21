@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\Admin\AdminMessageController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\InboxController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -19,6 +21,9 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/inbox', [InboxController::class, 'index'])->name('inbox.index');
+    Route::get('/inbox/{inboxMessage}', [InboxController::class, 'show'])->name('inbox.show');
+    Route::delete('/inbox/{inboxMessage}', [InboxController::class, 'destroy'])->name('inbox.destroy');
     Route::post('/games', [GameController::class, 'store'])->name('games.store');
     Route::get('/games/{game}', [GameController::class, 'show'])->name('games.show');
     Route::post('/games/{game}/advance-day', [GameController::class, 'advance'])->name('games.advance-day');
@@ -46,6 +51,8 @@ require __DIR__.'/auth.php';
 
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'overview'])->name('overview');
+    Route::get('/messages', [AdminMessageController::class, 'index'])->name('messages.index');
+    Route::post('/messages', [AdminMessageController::class, 'store'])->name('messages.store');
     Route::get('/users', [AdminController::class, 'users'])->name('users.index');
     Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
     Route::patch('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');

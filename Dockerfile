@@ -43,7 +43,9 @@ COPY --from=vendor /app/vendor ./vendor
 COPY --from=frontend /app/public/build ./public/build
 COPY Caddyfile /etc/caddy/Caddyfile
 
-RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache /data/caddy /config/caddy \
+RUN mkdir -p storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache /data/caddy /config/caddy \
+    && rm -f public/storage \
+    && ln -s ../storage/app/public public/storage \
     && chown -R www-data:www-data storage bootstrap/cache /data /config \
     && chmod +x scripts/docker-entrypoint.sh
 

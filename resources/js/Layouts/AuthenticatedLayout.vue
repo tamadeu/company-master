@@ -12,11 +12,11 @@ import {
     LayoutDashboard,
     LockKeyhole,
     LogOut,
+    Mail,
     Menu,
     Package,
     ShieldCheck,
     ShoppingCart,
-    Store,
     UserRound,
     Users,
     X,
@@ -35,6 +35,14 @@ interface LayoutCompany {
     name: string;
 }
 
+interface NavigationItem {
+    label: string;
+    icon: typeof LayoutDashboard;
+    href: string;
+    active: boolean;
+    badge?: number;
+}
+
 const page = usePage<
     PageProps<{
         game?: LayoutGame | null;
@@ -49,14 +57,22 @@ const overviewUrl = computed(() =>
     game.value ? route('games.show', game.value.id) : route('dashboard'),
 );
 
-const availableNavigation = computed(() => {
+const availableNavigation = computed<NavigationItem[]>(() => {
     const adminNavigation = page.props.auth.user.is_admin
         ? [{ label: 'Administração', icon: ShieldCheck, href: route('admin.overview'), active: route().current('admin.*') }]
         : [];
+    const inboxNavigation = {
+        label: 'Caixa de entrada',
+        icon: Mail,
+        href: route('inbox.index'),
+        active: route().current('inbox.*'),
+        badge: page.props.auth.unreadInboxCount,
+    };
 
     if (!game.value) {
         return [
             { label: 'Visão geral', icon: LayoutDashboard, href: overviewUrl.value, active: route().current('dashboard') },
+            inboxNavigation,
             ...adminNavigation,
         ];
     }
@@ -70,6 +86,7 @@ const availableNavigation = computed(() => {
         { label: 'Financeiro', icon: CircleDollarSign, href: route('games.finance.index', game.value.id), active: route().current('games.finance.*') },
         { label: 'Relatórios', icon: FileChartColumn, href: route('games.reports.index', game.value.id), active: route().current('games.reports.*') },
         { label: 'Equipe', icon: Users, href: route('games.team.index', game.value.id), active: route().current('games.team.*') || route().current('games.employees.*') },
+        inboxNavigation,
         ...adminNavigation,
     ];
 });
@@ -101,16 +118,13 @@ const unavailableNavigation: Array<{ label: string; icon: typeof CircleDollarSig
             class="fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-[#102b46] text-white transition-transform duration-200 lg:translate-x-0"
             :class="mobileNavigationOpen ? 'translate-x-0' : '-translate-x-full'"
         >
-            <div class="flex h-16 items-center justify-between border-b border-white/10 px-5">
-                <Link :href="overviewUrl" class="flex items-center gap-3">
-                    <span class="grid size-9 place-items-center rounded-md bg-[#24c6b3] text-[#0d3049]">
-                        <Store :size="20" stroke-width="2.3" />
-                    </span>
-                    <ApplicationLogo class="text-xl text-white" />
+            <div class="flex h-16 items-center justify-between border-b border-[#dce5ec] bg-white px-4">
+                <Link :href="overviewUrl" class="flex min-w-0 items-center" aria-label="Company Master">
+                    <ApplicationLogo class="h-9 w-auto max-w-[185px]" />
                 </Link>
                 <button
                     type="button"
-                    class="grid size-9 place-items-center text-white/75 lg:hidden"
+                    class="grid size-9 place-items-center text-[#17324f] lg:hidden"
                     aria-label="Fechar navegação"
                     @click="mobileNavigationOpen = false"
                 >
@@ -128,7 +142,8 @@ const unavailableNavigation: Array<{ label: string; icon: typeof CircleDollarSig
                     @click="mobileNavigationOpen = false"
                 >
                     <component :is="item.icon" :size="19" />
-                    {{ item.label }}
+                    <span class="flex-1">{{ item.label }}</span>
+                    <span v-if="item.badge" class="grid min-w-5 place-items-center rounded-full bg-[#24c6b3] px-1.5 py-0.5 text-[10px] font-bold text-[#0d3049]">{{ item.badge > 99 ? '99+' : item.badge }}</span>
                 </Link>
 
                 <button
@@ -163,7 +178,7 @@ const unavailableNavigation: Array<{ label: string; icon: typeof CircleDollarSig
 
                 <div class="min-w-0 flex-1">
                     <div class="truncate text-sm font-bold text-[#12233f]">
-                        {{ company?.name ?? 'ERP Game' }}
+                        {{ company?.name ?? 'Company Master' }}
                     </div>
                     <div class="truncate text-xs text-[#6b7f93]">
                         {{ company ? 'Sua empresa, suas decisões.' : 'Simulação empresarial' }}

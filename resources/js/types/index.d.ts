@@ -11,5 +11,6 @@ export type PageProps<
 > = T & {
     auth: {
         user: User;
+        unreadInboxCount: number;
     };
 };

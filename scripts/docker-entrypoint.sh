@@ -16,7 +16,6 @@ until php artisan migrate --force; do
     sleep 3
 done
 
-php artisan storage:link || true
 php artisan config:cache
 php artisan view:cache
 

@@ -23,6 +23,16 @@ class User extends Authenticatable
         return $this->hasMany(Game::class);
     }
 
+    public function inboxMessages(): HasMany
+    {
+        return $this->hasMany(InboxMessage::class, 'recipient_user_id');
+    }
+
+    public function sentInboxMessages(): HasMany
+    {
+        return $this->hasMany(InboxMessage::class, 'sender_user_id');
+    }
+
     /**
      * Get the attributes that should be cast.
      *

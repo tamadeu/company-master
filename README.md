@@ -112,6 +112,12 @@ php artisan user:grant-admin email@exemplo.com
 
 O acesso é protegido por autenticação, verificação de e-mail e permissão administrativa. A população é um cadastro mestre compartilhado, sem vínculo com partidas. Produtos do catálogo afetam somente partidas criadas depois da alteração; produtos já movimentados permanecem preservados no histórico da empresa.
 
+## Caixa de entrada
+
+A Inbox em `/inbox` concentra mensagens não lidas e lidas do usuário. O sistema envia alertas sobre eventos da partida, recebimento de mercadorias, insuficiência de caixa e encerramento por vitória ou falência. Mensagens podem incluir um link interno para a ação relacionada.
+
+Super administradores usam **Administração > Mensagens** para enviar um aviso a um usuário específico ou a todos os jogadores. Cada destinatário recebe uma cópia independente, preservando seu próprio estado de leitura. A primeira versão possui somente a caixa de entrada; pastas, respostas e anexos permanecem fora do escopo.
+
 ## Arquitetura
 
 A criação de partidas fica em `app/Domain/Game/Actions/CreateGame.php`. O avanço transacional fica em `app/Domain/Game/Services/DayProcessor.php`; eventos em `app/Domain/Game/Services/EventEngine.php`; mutações de caixa passam por `app/Domain/Finance/Services/LedgerService.php`. Controllers apenas validam, autorizam, delegam operações e retornam respostas.
@@ -159,7 +165,7 @@ Preços de venda são dados cadastrais do produto e ficam em **Estoque e produto
 
 ## População e clientes
 
-Cada partida recebe 100 NPCs fictícios e determinísticos. A população armazena somente código, nome, nascimento, gênero, cidade, estado e email interno do jogo. CPF, RG, senha, filiação, endereço e telefones não são persistidos.
+A aplicação mantém uma população global inicial de 100 NPCs fictícios e determinísticos, compartilhada por todas as partidas. A população armazena somente código, nome, nascimento, gênero, cidade, estado e email interno do jogo. CPF, RG, senha, filiação, endereço e telefones não são persistidos.
 
 NPCs começam como prospects e são promovidos automaticamente para clientes na primeira compra. Toda quantidade e receita de `sale_items` é decomposta em compras vinculadas a clientes. O módulo Clientes apresenta conversão da população, compras, ticket médio, valor vitalício e recorrência.
 
