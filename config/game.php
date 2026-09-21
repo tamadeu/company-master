@@ -5,7 +5,7 @@ return [
     'initial_capital_cents' => 10_000_000,
     'automation' => [
         'enabled' => env('GAME_AUTOMATION_ENABLED', true),
-        'interval_minutes' => (int) env('GAME_AUTOMATION_INTERVAL_MINUTES', 60),
+        'daily_at' => env('GAME_AUTOMATION_DAILY_AT', '00:00'),
         'dispatch_batch_size' => (int) env('GAME_AUTOMATION_BATCH_SIZE', 100),
     ],
     'victory' => [

@@ -8,8 +8,10 @@ use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\SupplierProduct;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Config;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('a game is created transactionally with its initial company data', function () {
     $user = User::factory()->create();
@@ -40,4 +42,28 @@ test('a failure rolls back the complete game creation', function () {
     expect(Game::count())->toBe(0)
         ->and(Product::count())->toBe(0)
         ->and(FinancialEntry::count())->toBe(0);
+});
+
+test('the dashboard exposes manual advancement only in local environment', function () {
+    $this->app->instance('env', 'local');
+    $user = User::factory()->create();
+    $game = app(CreateGame::class)->execute($user, 'Local', 'Empresa local', 12346);
+
+    $this->actingAs($user)
+        ->get(route('games.show', $game))
+        ->assertInertia(fn (Assert $page) => $page->where('manualAdvanceEnabled', true));
+});
+
+test('production games are scheduled for midnight and hide manual advancement', function () {
+    CarbonImmutable::setTestNow('2026-09-21 18:30:00');
+    $this->app->instance('env', 'production');
+    $user = User::factory()->create();
+    $game = app(CreateGame::class)->execute($user, 'Produção', 'Empresa automática', 12347);
+
+    expect($game->automation_enabled)->toBeTrue()
+        ->and($game->next_processing_at?->toDateTimeString())->toBe('2026-09-22 00:00:00');
+
+    $this->actingAs($user)
+        ->get(route('games.show', $game))
+        ->assertInertia(fn (Assert $page) => $page->where('manualAdvanceEnabled', false));
 });

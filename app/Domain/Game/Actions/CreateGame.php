@@ -3,6 +3,7 @@
 namespace App\Domain\Game\Actions;
 
 use App\Domain\Finance\Services\LedgerService;
+use App\Domain\Game\Services\GameAutomationClock;
 use App\Models\Game;
 use App\Models\ProductTemplate;
 use App\Models\User;
@@ -13,6 +14,7 @@ class CreateGame
 {
     public function __construct(
         private readonly LedgerService $ledger,
+        private readonly GameAutomationClock $automationClock,
     ) {}
 
     public function execute(User $user, string $gameName, string $companyName, ?int $seed = null): Game
@@ -25,9 +27,9 @@ class CreateGame
                 'seed' => $seed ?? random_int(1, PHP_INT_MAX),
                 'current_date' => $gameDate,
                 'started_at' => now(),
-                'automation_enabled' => config('game.automation.enabled'),
-                'next_processing_at' => config('game.automation.enabled')
-                    ? now()->addMinutes(config('game.automation.interval_minutes'))
+                'automation_enabled' => app()->environment('production') && config('game.automation.enabled'),
+                'next_processing_at' => app()->environment('production') && config('game.automation.enabled')
+                    ? $this->automationClock->nextProcessingAt()
                     : null,
             ]);
 

@@ -8,6 +8,8 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('games:dispatch-due')
-    ->everyMinute()
-    ->withoutOverlapping();
+if (app()->environment('production') && config('game.automation.enabled')) {
+    Schedule::command('games:dispatch-due')
+        ->everyMinute()
+        ->withoutOverlapping();
+}

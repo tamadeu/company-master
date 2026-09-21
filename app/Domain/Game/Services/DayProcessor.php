@@ -26,6 +26,7 @@ class DayProcessor
         private readonly GameOutcomeService $outcomes,
         private readonly InboxService $inbox,
         private readonly AutomaticPurchasingService $automaticPurchasing,
+        private readonly GameAutomationClock $automationClock,
     ) {}
 
     public function process(Game $game, string $expectedDate): array
@@ -228,7 +229,7 @@ class DayProcessor
                 'current_date' => $lockedGame->current_date->copy()->addDay(),
                 'last_processed_at' => now(),
                 'next_processing_at' => $outcome['status'] === 'active' && $lockedGame->automation_enabled
-                    ? now()->addMinutes(config('game.automation.interval_minutes'))
+                    ? $this->automationClock->nextProcessingAt()
                     : null,
             ]);
 

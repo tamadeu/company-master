@@ -8,7 +8,7 @@ class AdvanceDayRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        return $this->user() !== null && app()->environment(['local', 'testing']);
     }
 
     public function rules(): array

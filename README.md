@@ -120,15 +120,15 @@ Super administradores usam **Administração > Mensagens** para enviar um aviso 
 
 ## Processamento automático
 
-Partidas ativas processam vendas e o fechamento diário em background, mesmo sem usuário autenticado ou com o navegador fechado. O scheduler verifica partidas vencidas a cada minuto e envia jobs idempotentes para a fila Redis. No Docker de produção, Supervisor mantém web, queue worker e scheduler ativos no mesmo container.
+Em produção, partidas ativas processam vendas e o fechamento diário em background à meia-noite do servidor, mesmo sem usuário autenticado ou com o navegador fechado. O scheduler verifica partidas vencidas a cada minuto para também recuperar uma virada perdida durante eventual indisponibilidade e envia jobs idempotentes para a fila Redis. No Docker de produção, Supervisor mantém web, queue worker e scheduler ativos no mesmo container. Em ambiente local, a automação não é agendada e o botão **Avançar dia** permanece disponível.
 
 Cada processamento com vendas gera uma notificação estruturada para o proprietário da partida. O sino no cabeçalho abre `/notifications`, onde ficam faturamento, unidades vendidas, novos clientes, empresa, data do jogo e acesso direto aos registros de vendas. A notificação também aparece na Inbox geral.
 
-O intervalo padrão é de 60 minutos reais por dia do jogo e pode ser ajustado nas variáveis do Dokploy:
+O horário padrão pode ser ajustado nas variáveis do Dokploy:
 
 ```dotenv
 GAME_AUTOMATION_ENABLED=true
-GAME_AUTOMATION_INTERVAL_MINUTES=60
+GAME_AUTOMATION_DAILY_AT=00:00
 GAME_AUTOMATION_BATCH_SIZE=100
 ```
 

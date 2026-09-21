@@ -3,6 +3,7 @@
 use App\Domain\Game\Actions\CreateGame;
 use App\Models\DailySnapshot;
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('the owner advances the expected game date and receives a summary', function () {
@@ -41,6 +42,17 @@ test('another user cannot advance the game', function () {
     $game = app(CreateGame::class)->execute($owner, 'Privada', 'Empresa privada', 502);
 
     $this->actingAs($intruder)
+        ->post(route('games.advance-day', $game), ['game_date' => '2026-01-01'])
+        ->assertForbidden();
+});
+
+test('manual day advancement is forbidden in production', function () {
+    $this->app->instance('env', 'production');
+    $this->withoutMiddleware(PreventRequestForgery::class);
+    $user = User::factory()->create();
+    $game = app(CreateGame::class)->execute($user, 'Produção', 'Empresa', 503);
+
+    $this->actingAs($user)
         ->post(route('games.advance-day', $game), ['game_date' => '2026-01-01'])
         ->assertForbidden();
 });

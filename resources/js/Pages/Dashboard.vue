@@ -136,6 +136,7 @@ const props = defineProps<{
     tutorial: { completed: boolean };
     activeEvent: ActiveEvent | null;
     dailyHistory: DailyHistoryItem[];
+    manualAdvanceEnabled: boolean;
     flash?: {
         success?: string | null;
         daySummary?: DaySummary | null;
@@ -251,7 +252,7 @@ const completeTutorial = () => {
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button v-if="game" type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[#cfdbe4] bg-white px-4 text-sm font-bold text-[#31506d]" @click="createGameOpen = true"><Plus :size="18" /> Nova partida</button>
-                    <button v-if="game" type="button" :disabled="advanceForm.processing || game.status !== 'active'" class="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#d95340] disabled:opacity-50" @click="advanceConfirmationOpen = true"><Play :size="18" fill="currentColor" /> {{ advanceForm.processing ? 'Processando...' : 'Avançar dia' }}</button>
+                    <button v-if="game && manualAdvanceEnabled" type="button" :disabled="advanceForm.processing || game.status !== 'active'" class="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#d95340] disabled:opacity-50" @click="advanceConfirmationOpen = true"><Play :size="18" fill="currentColor" /> {{ advanceForm.processing ? 'Processando...' : 'Avançar dia' }}</button>
                     <button v-else type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white shadow-sm" @click="createGameOpen = true"><Plus :size="18" /> Nova partida</button>
                 </div>
             </div>
@@ -425,7 +426,7 @@ const completeTutorial = () => {
             </div>
         </div>
 
-        <div v-if="advanceConfirmationOpen && game" class="fixed inset-0 z-[70] grid place-items-center bg-[#071729]/60 p-4" @click.self="advanceConfirmationOpen = false">
+        <div v-if="manualAdvanceEnabled && advanceConfirmationOpen && game" class="fixed inset-0 z-[70] grid place-items-center bg-[#071729]/60 p-4" @click.self="advanceConfirmationOpen = false">
             <div class="w-full max-w-md rounded-md bg-white shadow-2xl">
                 <div class="flex items-start justify-between border-b border-[#e2e9ee] px-6 py-5"><div><h2 class="text-xl font-bold text-[#102039]">Avançar o dia?</h2><p class="mt-1 text-sm text-[#6b7f93]">As decisões atuais serão processadas para {{ formatDate(game.currentDate) }}.</p></div><button type="button" class="grid size-9 place-items-center rounded-md text-[#687d91] hover:bg-[#eef3f6]" aria-label="Fechar" @click="advanceConfirmationOpen = false"><X :size="20" /></button></div>
                 <div class="p-6"><div class="rounded-md bg-[#f2f7fa] p-4 text-sm leading-6 text-[#50677d]">O sistema receberá entregas vencidas, pagará obrigações, calculará demanda e registrará vendas. A operação é transacional.</div><p v-if="advanceError" class="mt-3 text-sm text-red-600">{{ advanceError }}</p><div class="mt-5 flex justify-end gap-2"><button type="button" class="h-10 rounded-md border border-[#cfdbe4] px-4 text-sm font-bold text-[#496177]" @click="advanceConfirmationOpen = false">Cancelar</button><button type="button" :disabled="advanceForm.processing" class="inline-flex h-10 items-center gap-2 rounded-md bg-[#ef654f] px-4 text-sm font-bold text-white disabled:opacity-50" @click="submitAdvance"><Play :size="16" fill="currentColor" /> {{ advanceForm.processing ? 'Processando...' : 'Confirmar avanço' }}</button></div></div>

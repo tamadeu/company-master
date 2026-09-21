@@ -99,6 +99,7 @@ class GameDashboardData
             'tutorial' => [
                 'completed' => (bool) ($company->settings['tutorial_completed'] ?? false),
             ],
+            'manualAdvanceEnabled' => app()->environment('local'),
             'activeEvent' => $activeEvent ? [
                 'type' => $activeEvent->type,
                 'title' => $activeEvent->title,

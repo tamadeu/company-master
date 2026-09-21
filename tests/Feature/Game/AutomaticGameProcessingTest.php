@@ -2,6 +2,7 @@
 
 use App\Domain\Game\Actions\AdvanceDay;
 use App\Domain\Game\Actions\CreateGame;
+use App\Domain\Game\Services\GameAutomationClock;
 use App\Jobs\ProcessGameDay;
 use App\Models\Game;
 use App\Models\Sale;
@@ -11,7 +12,13 @@ use Illuminate\Support\Facades\Bus;
 
 function automaticGame(string $name, int $seed): Game
 {
-    return app(CreateGame::class)->execute(User::factory()->create(), $name, "Empresa {$name}", $seed);
+    $game = app(CreateGame::class)->execute(User::factory()->create(), $name, "Empresa {$name}", $seed);
+    $game->update([
+        'automation_enabled' => true,
+        'next_processing_at' => app(GameAutomationClock::class)->nextProcessingAt(),
+    ]);
+
+    return $game->fresh();
 }
 
 test('a due game processes sales without an authenticated user', function () {
@@ -28,7 +35,7 @@ test('a due game processes sales without an authenticated user', function () {
     expect(auth()->check())->toBeFalse()
         ->and($game->current_date->toDateString())->toBe('2026-01-02')
         ->and($game->last_processed_at?->toDateTimeString())->toBe('2026-09-21 12:00:00')
-        ->and($game->next_processing_at?->toDateTimeString())->toBe('2026-09-21 13:00:00')
+        ->and($game->next_processing_at?->toDateTimeString())->toBe('2026-09-22 00:00:00')
         ->and(Sale::where('company_id', $game->company->id)->count())->toBe(1);
 });
 
@@ -69,5 +76,12 @@ test('manual processing also resets the automatic processing clock', function ()
 
     app(AdvanceDay::class)->execute($game, '2026-01-01');
 
-    expect($game->fresh()->next_processing_at?->toDateTimeString())->toBe('2026-09-21 16:00:00');
+    expect($game->fresh()->next_processing_at?->toDateTimeString())->toBe('2026-09-22 00:00:00');
+});
+
+test('the automation clock always targets the next server midnight', function () {
+    CarbonImmutable::setTestNow('2026-09-21 23:59:30');
+
+    expect(app(GameAutomationClock::class)->nextProcessingAt()->toDateTimeString())
+        ->toBe('2026-09-22 00:00:00');
 });
