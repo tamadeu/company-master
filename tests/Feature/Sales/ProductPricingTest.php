@@ -41,13 +41,13 @@ test('the sales page exposes sales records and commercial capacity', function ()
             ->component('Products/Index')
             ->where('summary.revenueCents', 0)
             ->where('summary.unitsSold', 0)
-            ->has('sales', 0)
+            ->has('orders.data', 0)
             ->has('productPerformance', 0)
             ->missing('products')
             ->where('salesRules.dailyCapacityUnits', 5));
 });
 
-test('the sales page shows processed records customers and sellers', function () {
+test('the sales page shows identified customer orders and cart items', function () {
     Config::set('game.events.daily_chance_basis_points', 0);
     $user = User::factory()->create();
     $game = app(CreateGame::class)->execute($user, 'Vendas', 'Mercado Aurora', 604);
@@ -59,9 +59,9 @@ test('the sales page shows processed records customers and sellers', function ()
     $this->actingAs($user)
         ->get(route('games.products.index', $game))
         ->assertInertia(fn (Assert $page) => $page
-            ->has('sales', 1)
-            ->has('sales.0.items')
-            ->where('sales.0.items.0.sellers.0', 'Gestor')
-            ->where('sales.0.customerCount', fn ($count) => $count > 0)
+            ->has('orders.data')
+            ->where('orders.data.0.number', fn ($number) => str_starts_with($number, 'VEN-'))
+            ->has('orders.data.0.customer.name')
+            ->has('orders.data.0.items')
             ->has('productPerformance'));
 });

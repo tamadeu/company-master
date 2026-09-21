@@ -34,6 +34,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
                 'unreadInboxCount' => fn () => $request->user()?->inboxMessages()->whereNull('read_at')->count() ?? 0,
+                'unreadSalesNotificationCount' => fn () => $request->user()?->inboxMessages()->where('category', 'sale')->whereNull('read_at')->count() ?? 0,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

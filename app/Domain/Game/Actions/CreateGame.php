@@ -25,6 +25,10 @@ class CreateGame
                 'seed' => $seed ?? random_int(1, PHP_INT_MAX),
                 'current_date' => $gameDate,
                 'started_at' => now(),
+                'automation_enabled' => config('game.automation.enabled'),
+                'next_processing_at' => config('game.automation.enabled')
+                    ? now()->addMinutes(config('game.automation.interval_minutes'))
+                    : null,
             ]);
 
             $company = $game->company()->create([

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { BellRing, ChevronRight, CircleAlert, Inbox, Mail, MailOpen, Megaphone, Trash2 } from '@lucide/vue';
+import { BellRing, ChevronRight, CircleAlert, CircleDollarSign, Inbox, Mail, MailOpen, Megaphone, Trash2 } from '@lucide/vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 
 interface InboxMessage {
@@ -34,6 +34,7 @@ const categoryLabel = (category: string) => ({
     event: 'Evento',
     operation: 'Operação',
     outcome: 'Resultado',
+    sale: 'Vendas',
 }[category] ?? 'Sistema');
 
 const categoryIcon = (category: string) => ({
@@ -42,6 +43,7 @@ const categoryIcon = (category: string) => ({
     event: BellRing,
     operation: Inbox,
     outcome: BellRing,
+    sale: CircleDollarSign,
 }[category] ?? Mail);
 
 const removeMessage = (message: InboxMessage) => {

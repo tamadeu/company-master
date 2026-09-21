@@ -4,6 +4,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import { PageProps } from '@/types';
 import {
+    Bell,
     CalendarDays,
     ChevronDown,
     CircleDollarSign,
@@ -192,6 +193,11 @@ const unavailableNavigation: Array<{ label: string; icon: typeof CircleDollarSig
                         <div class="text-[11px] text-[#7a8da0]">Dia {{ game.dayNumber }} de {{ game.victoryDays }}</div>
                     </div>
                 </div>
+
+                <Link :href="route('notifications.index')" class="relative ml-3 grid size-10 place-items-center rounded-md text-[#526a80] hover:bg-[#f0f5f8] hover:text-[#173f67]" :class="route().current('notifications.*') ? 'bg-[#e8f3f5] text-[#087c68]' : ''" aria-label="Notificações de vendas">
+                    <Bell :size="20" />
+                    <span v-if="page.props.auth.unreadSalesNotificationCount" class="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-[#e6653f] px-1 text-[9px] font-bold leading-4 text-white">{{ page.props.auth.unreadSalesNotificationCount > 99 ? '99+' : page.props.auth.unreadSalesNotificationCount }}</span>
+                </Link>
 
                 <Dropdown align="right" width="48">
                     <template #trigger>

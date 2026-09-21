@@ -12,5 +12,6 @@ export type PageProps<
     auth: {
         user: User;
         unreadInboxCount: number;
+        unreadSalesNotificationCount: number;
     };
 };

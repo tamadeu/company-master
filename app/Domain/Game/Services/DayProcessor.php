@@ -108,6 +108,25 @@ class DayProcessor
             $outcome = $this->outcomes->evaluate($lockedGame->setRelation('company', $company), $completedDays);
             $gameUrl = "/games/{$lockedGame->id}";
 
+            if ($sales['units_sold'] > 0) {
+                $this->inbox->sendSystem(
+                    $lockedGame->user,
+                    'sale',
+                    "{$sales['units_sold']} unidade(s) vendida(s)",
+                    "As vendas de {$expectedDate} foram processadas para {$company->name}.",
+                    "/games/{$lockedGame->id}/products",
+                    [
+                        'game_id' => $lockedGame->id,
+                        'game_name' => $lockedGame->name,
+                        'company_name' => $company->name,
+                        'game_date' => $expectedDate,
+                        'revenue_cents' => $sales['revenue_cents'],
+                        'units_sold' => $sales['units_sold'],
+                        'new_customers' => $sales['new_customers'],
+                    ],
+                );
+            }
+
             if ($receivedOrderIds !== []) {
                 $count = count($receivedOrderIds);
                 $this->inbox->sendSystem(
@@ -197,7 +216,13 @@ class DayProcessor
                 'summary' => $summary,
             ]);
             $process->update(['status' => 'completed']);
-            $lockedGame->update(['current_date' => $lockedGame->current_date->copy()->addDay()]);
+            $lockedGame->update([
+                'current_date' => $lockedGame->current_date->copy()->addDay(),
+                'last_processed_at' => now(),
+                'next_processing_at' => $outcome['status'] === 'active' && $lockedGame->automation_enabled
+                    ? now()->addMinutes(config('game.automation.interval_minutes'))
+                    : null,
+            ]);
 
             return $summary;
         }, attempts: 3);

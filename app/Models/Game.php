@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['user_id', 'name', 'status', 'seed', 'current_date', 'started_at', 'ended_at'])]
+#[Fillable(['user_id', 'name', 'status', 'automation_enabled', 'seed', 'current_date', 'started_at', 'ended_at', 'next_processing_at', 'last_processed_at'])]
 class Game extends Model
 {
     /** @use HasFactory<GameFactory> */
@@ -45,9 +45,12 @@ class Game extends Model
     {
         return [
             'seed' => 'integer',
+            'automation_enabled' => 'boolean',
             'current_date' => 'date',
             'started_at' => 'immutable_datetime',
             'ended_at' => 'immutable_datetime',
+            'next_processing_at' => 'immutable_datetime',
+            'last_processed_at' => 'immutable_datetime',
         ];
     }
 }

@@ -4,6 +4,7 @@ use App\Domain\Game\Actions\AdvanceDay;
 use App\Domain\Game\Actions\CreateGame;
 use App\Models\Customer;
 use App\Models\CustomerPurchase;
+use App\Models\CustomerOrder;
 use App\Models\Game;
 use App\Models\PopulationNpc;
 use App\Models\SaleItem;
@@ -33,6 +34,7 @@ test('all games share one deterministic global population without sensitive colu
 
 test('every sold unit and revenue amount is linked to a customer purchase', function () {
     Config::set('game.events.daily_chance_basis_points', 0);
+    Config::set('game.sales.owner_base_capacity_units', 100);
     $game = customerGame();
     foreach ($game->company->inventoryBalances as $balance) {
         $balance->update(['quantity' => 100, 'average_cost_cents' => 1_000]);
@@ -44,8 +46,12 @@ test('every sold unit and revenue amount is linked to a customer purchase', func
         ->and(CustomerPurchase::sum('quantity'))->toBe(SaleItem::sum('quantity'))
         ->and(CustomerPurchase::sum('revenue_cents'))->toBe(SaleItem::sum('revenue_cents'))
         ->and(CustomerPurchase::whereNull('customer_id')->count())->toBe(0)
+        ->and(CustomerPurchase::whereNull('customer_order_id')->count())->toBe(0)
         ->and(Customer::count())->toBe($summary['new_customers'])
-        ->and(Customer::sum('purchase_count'))->toBe(CustomerPurchase::count())
+        ->and(Customer::sum('purchase_count'))->toBe(CustomerOrder::count())
+        ->and(CustomerOrder::sum('total_quantity'))->toBe(SaleItem::sum('quantity'))
+        ->and(CustomerOrder::sum('revenue_cents'))->toBe(SaleItem::sum('revenue_cents'))
+        ->and(CustomerOrder::withCount('purchases')->get()->max('purchases_count'))->toBeGreaterThan(1)
         ->and(Customer::sum('lifetime_value_cents'))->toBe(CustomerPurchase::sum('revenue_cents'));
 });
 

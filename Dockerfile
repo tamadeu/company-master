@@ -1,6 +1,7 @@
 FROM dunglas/frankenphp:php8.4-alpine AS php-base
 
-RUN install-php-extensions \
+RUN apk add --no-cache supervisor \
+    && install-php-extensions \
     intl \
     mbstring \
     opcache \
@@ -36,12 +37,14 @@ FROM php-base AS runtime
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
+    REDIS_CLIENT=predis \
     SERVER_NAME=:8080
 
 COPY . .
 COPY --from=vendor /app/vendor ./vendor
 COPY --from=frontend /app/public/build ./public/build
 COPY Caddyfile /etc/caddy/Caddyfile
+COPY docker/supervisord.conf /etc/supervisord.conf
 
 RUN mkdir -p storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache /data/caddy /config/caddy \
     && rm -f public/storage \
@@ -57,4 +60,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -qO- http://127.0.0.1:8080/up >/dev/null || exit 1
 
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
-CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]
+CMD ["supervisord", "-c", "/etc/supervisord.conf"]

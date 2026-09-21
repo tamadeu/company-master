@@ -118,6 +118,27 @@ A Inbox em `/inbox` concentra mensagens não lidas e lidas do usuário. O sistem
 
 Super administradores usam **Administração > Mensagens** para enviar um aviso a um usuário específico ou a todos os jogadores. Cada destinatário recebe uma cópia independente, preservando seu próprio estado de leitura. A primeira versão possui somente a caixa de entrada; pastas, respostas e anexos permanecem fora do escopo.
 
+## Processamento automático
+
+Partidas ativas processam vendas e o fechamento diário em background, mesmo sem usuário autenticado ou com o navegador fechado. O scheduler verifica partidas vencidas a cada minuto e envia jobs idempotentes para a fila Redis. No Docker de produção, Supervisor mantém web, queue worker e scheduler ativos no mesmo container.
+
+Cada processamento com vendas gera uma notificação estruturada para o proprietário da partida. O sino no cabeçalho abre `/notifications`, onde ficam faturamento, unidades vendidas, novos clientes, empresa, data do jogo e acesso direto aos registros de vendas. A notificação também aparece na Inbox geral.
+
+O intervalo padrão é de 60 minutos reais por dia do jogo e pode ser ajustado nas variáveis do Dokploy:
+
+```dotenv
+GAME_AUTOMATION_ENABLED=true
+GAME_AUTOMATION_INTERVAL_MINUTES=60
+GAME_AUTOMATION_BATCH_SIZE=100
+```
+
+No desenvolvimento com Sail, mantenha estes processos em terminais separados quando quiser testar a automação continuamente:
+
+```bash
+./vendor/bin/sail artisan queue:work redis --tries=3 --timeout=120
+./vendor/bin/sail artisan schedule:work
+```
+
 ## Arquitetura
 
 A criação de partidas fica em `app/Domain/Game/Actions/CreateGame.php`. O avanço transacional fica em `app/Domain/Game/Services/DayProcessor.php`; eventos em `app/Domain/Game/Services/EventEngine.php`; mutações de caixa passam por `app/Domain/Finance/Services/LedgerService.php`. Controllers apenas validam, autorizam, delegam operações e retornam respostas.

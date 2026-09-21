@@ -22,6 +22,11 @@ class Sale extends Model
         return $this->hasMany(SaleItem::class);
     }
 
+    public function customerOrders(): HasMany
+    {
+        return $this->hasMany(CustomerOrder::class);
+    }
+
     public function financialEntry(): MorphOne
     {
         return $this->morphOne(FinancialEntry::class, 'reference');

@@ -70,6 +70,11 @@ class Company extends Model
         return $this->hasMany(Customer::class);
     }
 
+    public function customerOrders(): HasMany
+    {
+        return $this->hasMany(CustomerOrder::class);
+    }
+
     protected function casts(): array
     {
         return [

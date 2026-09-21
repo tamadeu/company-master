@@ -13,11 +13,16 @@ class ProductsPageData
     {
         $game->load([
             'company.sales.items.product',
-            'company.sales.items.customerPurchases',
             'company.sales.items.attributions.employee',
             'dailySnapshots',
         ]);
         $company = $game->company;
+        $orders = $company->customerOrders()
+            ->with(['customer.populationNpc', 'purchases.saleItem.product'])
+            ->orderByDesc('game_date')
+            ->orderByDesc('id')
+            ->paginate(25)
+            ->withQueryString();
         $daySeed = hexdec(substr(hash('sha256', "{$game->seed}:{$game->current_date->toDateString()}"), 0, 8));
         $capacity = $this->salesCapacity->calculate($game, $daySeed);
         $latestSnapshot = $game->dailySnapshots->sortByDesc('game_date')->first();
@@ -45,35 +50,31 @@ class ProductsPageData
                 'revenueCents' => (int) $company->sales->sum('revenue_cents'),
                 'cogsCents' => (int) $company->sales->sum('cogs_cents'),
                 'unitsSold' => (int) $company->sales->flatMap(fn ($sale) => $sale->items)->sum('quantity'),
-                'processedSales' => $company->sales->count(),
-                'customerPurchases' => (int) $company->sales
-                    ->flatMap(fn ($sale) => $sale->items)
-                    ->sum(fn ($item) => $item->customerPurchases->count()),
+                'processedSales' => $orders->total(),
+                'customerPurchases' => $orders->total(),
             ],
-            'sales' => $company->sales->sortByDesc('game_date')->map(fn ($sale) => [
-                'id' => $sale->id,
-                'date' => $sale->game_date->toDateString(),
-                'revenueCents' => $sale->revenue_cents,
-                'cogsCents' => $sale->cogs_cents,
-                'grossProfitCents' => $sale->revenue_cents - $sale->cogs_cents,
-                'unitsSold' => (int) $sale->items->sum('quantity'),
-                'customerCount' => $sale->items
-                    ->flatMap(fn ($item) => $item->customerPurchases)
-                    ->pluck('customer_id')
-                    ->unique()
-                    ->count(),
-                'items' => $sale->items->map(fn ($item) => [
-                    'productName' => $item->product->name,
-                    'quantity' => $item->quantity,
-                    'unitPriceCents' => $item->unit_price_cents,
-                    'revenueCents' => $item->revenue_cents,
-                    'cogsCents' => $item->cogs_cents,
-                    'customerCount' => $item->customerPurchases->pluck('customer_id')->unique()->count(),
-                    'sellers' => $item->attributions->map(
-                        fn ($attribution) => $attribution->employee?->name ?? 'Gestor',
-                    )->unique()->values(),
+            'orders' => $orders->through(fn ($order) => [
+                'id' => $order->id,
+                'number' => 'VEN-'.str_pad((string) $order->id, 8, '0', STR_PAD_LEFT),
+                'date' => $order->game_date->toDateString(),
+                'status' => $order->status,
+                'customer' => [
+                    'id' => $order->customer->id,
+                    'name' => $order->customer->populationNpc->name,
+                    'code' => $order->customer->populationNpc->code,
+                ],
+                'skuCount' => $order->purchases->pluck('saleItem.product_id')->unique()->count(),
+                'totalQuantity' => $order->total_quantity,
+                'revenueCents' => $order->revenue_cents,
+                'items' => $order->purchases->sortBy('saleItem.product.name')->map(fn ($purchase) => [
+                    'productId' => $purchase->saleItem->product_id,
+                    'productName' => $purchase->saleItem->product->name,
+                    'sku' => $purchase->saleItem->product->sku,
+                    'quantity' => $purchase->quantity,
+                    'unitPriceCents' => $purchase->saleItem->unit_price_cents,
+                    'revenueCents' => $purchase->revenue_cents,
                 ])->values(),
-            ])->values(),
+            ]),
             'productPerformance' => $company->sales
                 ->flatMap(fn ($sale) => $sale->items)
                 ->groupBy('product_id')
