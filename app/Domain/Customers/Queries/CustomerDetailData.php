@@ -9,8 +9,9 @@ class CustomerDetailData
 {
     public function for(Game $game, Customer $customer): array
     {
-        $customer->load(['populationNpc', 'purchases.saleItem.product']);
-        $purchases = $customer->purchases->sortByDesc('game_date');
+        $customer->load(['populationNpc', 'orders.purchases.saleItem.product']);
+        $orders = $customer->orders->sortByDesc('game_date');
+        $purchases = $orders->flatMap->purchases->sortByDesc('game_date');
         $totalUnits = (int) $purchases->sum('quantity');
         $activeDays = abs((int) $customer->acquired_on->diffInDays($game->current_date)) + 1;
         $daysSinceLastPurchase = abs((int) $customer->last_purchase_on->diffInDays($game->current_date));
@@ -28,13 +29,13 @@ class CustomerDetailData
                     ? intdiv($items->sum('revenue_cents') * 10_000, $customer->lifetime_value_cents)
                     : 0,
             ])->sortByDesc('revenueCents')->values();
-        $timeline = $purchases
-            ->groupBy(fn ($purchase) => $purchase->game_date->toDateString())
-            ->map(fn ($items, $date) => [
+        $timeline = $orders
+            ->groupBy(fn ($order) => $order->game_date->toDateString())
+            ->map(fn ($dailyOrders, $date) => [
                 'date' => $date,
-                'purchaseCount' => $items->count(),
-                'units' => (int) $items->sum('quantity'),
-                'revenueCents' => (int) $items->sum('revenue_cents'),
+                'purchaseCount' => $dailyOrders->count(),
+                'units' => (int) $dailyOrders->sum('total_quantity'),
+                'revenueCents' => (int) $dailyOrders->sum('revenue_cents'),
             ])->sortBy('date')->values();
 
         return [
@@ -76,6 +77,8 @@ class CustomerDetailData
             'timeline' => $timeline,
             'purchases' => $purchases->map(fn ($purchase) => [
                 'id' => $purchase->id,
+                'orderId' => $purchase->customer_order_id,
+                'orderNumber' => 'VEN-'.str_pad((string) $purchase->customer_order_id, 8, '0', STR_PAD_LEFT),
                 'date' => $purchase->game_date->toDateString(),
                 'productName' => $purchase->saleItem->product->name,
                 'quantity' => $purchase->quantity,

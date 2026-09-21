@@ -18,7 +18,8 @@ class ProductsPageData
         ]);
         $company = $game->company;
         $orders = $company->customerOrders()
-            ->with(['customer.populationNpc', 'purchases.saleItem.product'])
+            ->with(['customer.populationNpc'])
+            ->withCount('purchases')
             ->orderByDesc('game_date')
             ->orderByDesc('id')
             ->paginate(25)
@@ -63,17 +64,10 @@ class ProductsPageData
                     'name' => $order->customer->populationNpc->name,
                     'code' => $order->customer->populationNpc->code,
                 ],
-                'skuCount' => $order->purchases->pluck('saleItem.product_id')->unique()->count(),
+                'skuCount' => $order->purchases_count,
                 'totalQuantity' => $order->total_quantity,
                 'revenueCents' => $order->revenue_cents,
-                'items' => $order->purchases->sortBy('saleItem.product.name')->map(fn ($purchase) => [
-                    'productId' => $purchase->saleItem->product_id,
-                    'productName' => $purchase->saleItem->product->name,
-                    'sku' => $purchase->saleItem->product->sku,
-                    'quantity' => $purchase->quantity,
-                    'unitPriceCents' => $purchase->saleItem->unit_price_cents,
-                    'revenueCents' => $purchase->revenue_cents,
-                ])->values(),
+                'detailUrl' => route('games.sales.show', [$game, $order], absolute: false),
             ]),
             'productPerformance' => $company->sales
                 ->flatMap(fn ($sale) => $sale->items)

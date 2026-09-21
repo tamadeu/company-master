@@ -13,6 +13,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/games/{game}/advance-day', [GameController::class, 'advance'])->name('games.advance-day');
     Route::post('/games/{game}/tutorial/complete', [GameController::class, 'completeTutorial'])->name('games.tutorial.complete');
     Route::get('/games/{game}/products', [ProductController::class, 'index'])->name('games.products.index');
+    Route::get('/games/{game}/sales/{customerOrder}', [SalesOrderController::class, 'show'])->name('games.sales.show');
     Route::patch('/games/{game}/products/{product}', [ProductController::class, 'update'])->name('games.products.update');
     Route::get('/games/{game}/purchases', [PurchaseController::class, 'index'])->name('games.purchases.index');
     Route::post('/games/{game}/purchase-orders', [PurchaseController::class, 'store'])->name('games.purchase-orders.store');

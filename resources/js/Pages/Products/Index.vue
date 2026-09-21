@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { ChevronDown, CircleDollarSign, ContactRound, Gauge, PackageOpen, ReceiptText, ShoppingBag, TrendingUp, Users } from '@lucide/vue';
+import { ArrowRight, CircleDollarSign, ContactRound, Gauge, PackageOpen, ReceiptText, ShoppingBag, TrendingUp, Users } from '@lucide/vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
 interface GameSummary { id: number; currentDate: string; dayNumber: number; victoryDays: number }
 interface CompanySummary { id: number; name: string }
 interface SalesRules { dailyCapacityUnits: number; commercialEmployees: number; ownerBaseCapacityUnits: number; productivityMinBasisPoints: number; productivityMaxBasisPoints: number; latestUnmetDemandUnits: number }
-interface OrderItem { productId: number; productName: string; sku: string; quantity: number; unitPriceCents: number; revenueCents: number }
-interface CustomerOrder { id: number; number: string; date: string; status: string; customer: { id: number; name: string; code: string }; skuCount: number; totalQuantity: number; revenueCents: number; items: OrderItem[] }
+interface CustomerOrder { id: number; number: string; date: string; status: string; customer: { id: number; name: string; code: string }; skuCount: number; totalQuantity: number; revenueCents: number; detailUrl: string }
 interface PageLink { url: string | null; label: string; active: boolean }
 interface PaginatedOrders { data: CustomerOrder[]; links: PageLink[]; from: number | null; to: number | null; total: number }
 interface ProductPerformance { productId: number; productName: string; unitsSold: number; revenueCents: number; grossProfitCents: number }
@@ -22,7 +21,6 @@ const props = defineProps<{
     productPerformance: ProductPerformance[];
 }>();
 
-const expandedOrderId = ref<number | null>(props.orders.data[0]?.id ?? null);
 const moneyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatMoney = (cents: number) => moneyFormatter.format(cents / 100);
 const formatDate = (date: string) => new Intl.DateTimeFormat('pt-BR').format(new Date(`${date}T00:00:00`));
@@ -54,12 +52,7 @@ const cleanLabel = (label: string) => ({
                     <div v-if="orders.data.length" class="overflow-x-auto">
                         <table class="w-full min-w-[940px] text-left">
                             <thead class="bg-[#f8fafc] text-[10px] uppercase text-[#8293a4]"><tr><th class="px-5 py-3">ID da venda</th><th class="px-4 py-3">Data</th><th class="px-4 py-3">Cliente</th><th class="px-4 py-3 text-right">SKUs</th><th class="px-4 py-3 text-right">Unidades</th><th class="px-4 py-3 text-right">Total</th><th class="px-5 py-3 text-right">Carrinho</th></tr></thead>
-                            <tbody class="divide-y divide-[#edf1f4]">
-                                <template v-for="order in orders.data" :key="order.id">
-                                    <tr class="cursor-pointer hover:bg-[#f8fbfc]" @click="expandedOrderId = expandedOrderId === order.id ? null : order.id"><td class="px-5 py-4 font-mono text-xs font-bold text-[#17638d]">{{ order.number }}</td><td class="px-4 py-4 text-sm text-[#526a80]">{{ formatDate(order.date) }}</td><td class="px-4 py-4"><div class="text-sm font-semibold text-[#263e56]">{{ order.customer.name }}</div><div class="text-[11px] text-[#8a99a8]">{{ order.customer.code }}</div></td><td class="px-4 py-4 text-right text-sm font-semibold">{{ order.skuCount }}</td><td class="px-4 py-4 text-right text-sm">{{ order.totalQuantity }}</td><td class="px-4 py-4 text-right text-sm font-bold text-[#087c68]">{{ formatMoney(order.revenueCents) }}</td><td class="px-5 py-4"><button type="button" class="ml-auto grid size-9 place-items-center rounded-md border border-[#d7e2ea] text-[#17638d]" :aria-label="`Ver carrinho ${order.number}`" @click.stop="expandedOrderId = expandedOrderId === order.id ? null : order.id"><ChevronDown :size="17" class="transition-transform" :class="expandedOrderId === order.id ? 'rotate-180' : ''" /></button></td></tr>
-                                    <tr v-if="expandedOrderId === order.id"><td colspan="7" class="bg-[#f8fbfc] px-5 py-4"><div class="mb-3 flex items-center justify-between"><div class="text-xs font-bold uppercase text-[#526a80]">Itens do carrinho</div><div class="text-xs text-[#718499]">{{ order.items.length }} SKU(s)</div></div><table class="w-full text-left"><thead class="text-[10px] uppercase text-[#8a99a8]"><tr><th class="py-2">Produto</th><th class="py-2">SKU</th><th class="py-2 text-right">Qtd.</th><th class="py-2 text-right">Preço unitário</th><th class="py-2 text-right">Subtotal</th></tr></thead><tbody class="divide-y divide-[#e2e9ee]"><tr v-for="item in order.items" :key="item.productId"><td class="py-2.5 text-sm font-semibold text-[#354d64]">{{ item.productName }}</td><td class="py-2.5 font-mono text-xs text-[#718499]">{{ item.sku }}</td><td class="py-2.5 text-right text-sm">{{ item.quantity }}</td><td class="py-2.5 text-right text-sm">{{ formatMoney(item.unitPriceCents) }}</td><td class="py-2.5 text-right text-sm font-bold text-[#087c68]">{{ formatMoney(item.revenueCents) }}</td></tr></tbody></table></td></tr>
-                                </template>
-                            </tbody>
+                            <tbody class="divide-y divide-[#edf1f4]"><tr v-for="order in orders.data" :key="order.id" class="hover:bg-[#f8fbfc]"><td class="px-5 py-4 font-mono text-xs font-bold text-[#17638d]">{{ order.number }}</td><td class="px-4 py-4 text-sm text-[#526a80]">{{ formatDate(order.date) }}</td><td class="px-4 py-4"><div class="text-sm font-semibold text-[#263e56]">{{ order.customer.name }}</div><div class="text-[11px] text-[#8a99a8]">{{ order.customer.code }}</div></td><td class="px-4 py-4 text-right text-sm font-semibold">{{ order.skuCount }}</td><td class="px-4 py-4 text-right text-sm">{{ order.totalQuantity }}</td><td class="px-4 py-4 text-right text-sm font-bold text-[#087c68]">{{ formatMoney(order.revenueCents) }}</td><td class="px-5 py-4"><Link :href="order.detailUrl" class="ml-auto grid size-9 place-items-center rounded-md border border-[#d7e2ea] text-[#17638d] hover:bg-[#edf6f8]" :aria-label="`Abrir pedido ${order.number}`"><ArrowRight :size="17" /></Link></td></tr></tbody>
                         </table>
                     </div>
                     <div v-else class="grid min-h-64 place-items-center p-8 text-center"><div><ReceiptText :size="34" class="mx-auto text-[#9babb8]" /><h2 class="mt-3 text-sm font-bold text-[#354d64]">Nenhuma venda processada</h2><p class="mt-1 text-xs text-[#7a8c9d]">Vendas aparecerão aqui depois que um dia for avançado com estoque disponível.</p></div></div>

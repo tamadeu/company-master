@@ -184,6 +184,8 @@ O escopo é intencionalmente gerencial: folha detalhada, encargos, benefícios, 
 
 Preços de venda são dados cadastrais do produto e ficam em **Estoque e produtos**. A página **Vendas** é somente operacional: apresenta dias processados, itens, clientes atendidos, responsáveis comerciais e desempenho por produto.
 
+O fechamento interno de cada dia permanece em `sales`, enquanto cada venda ao cliente é registrada em `customer_orders` com ID no formato `VEN-########`. Um pedido agrupa todas as linhas de `customer_purchases` daquele cliente no dia e pode conter múltiplos SKUs. A página **Vendas** exibe esses pedidos em tabela paginada; cada linha abre uma página dedicada com resumo, dados do cliente e carrinho completo com produto, SKU, quantidade, preço unitário e subtotal.
+
 ## População e clientes
 
 A aplicação mantém uma população global inicial de 100 NPCs fictícios e determinísticos, compartilhada por todas as partidas. A população armazena somente código, nome, nascimento, gênero, cidade, estado e email interno do jogo. CPF, RG, senha, filiação, endereço e telefones não são persistidos.

@@ -54,6 +54,11 @@ return new class extends Migration
                 ->update(['customer_order_id' => $orderId]);
         }
 
+        DB::table('customers')->update(['purchase_count' => 0]);
+        foreach (DB::table('customer_orders')->selectRaw('customer_id, COUNT(*) AS total')->groupBy('customer_id')->cursor() as $total) {
+            DB::table('customers')->where('id', $total->customer_id)->update(['purchase_count' => $total->total]);
+        }
+
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('ALTER TABLE customer_orders ADD CONSTRAINT customer_orders_values_non_negative CHECK (total_quantity >= 0 AND revenue_cents >= 0)');
         }

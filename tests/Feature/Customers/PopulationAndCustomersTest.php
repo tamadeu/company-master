@@ -3,8 +3,8 @@
 use App\Domain\Game\Actions\AdvanceDay;
 use App\Domain\Game\Actions\CreateGame;
 use App\Models\Customer;
-use App\Models\CustomerPurchase;
 use App\Models\CustomerOrder;
+use App\Models\CustomerPurchase;
 use App\Models\Game;
 use App\Models\PopulationNpc;
 use App\Models\SaleItem;
