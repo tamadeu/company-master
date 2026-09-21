@@ -81,7 +81,9 @@ APP_NAME="ERP Game"
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://seu-dominio.example
+ASSET_URL=https://seu-dominio.example
 APP_KEY=base64:CHAVE_GERADA
+TRUSTED_PROXIES=*
 
 DB_CONNECTION=pgsql
 DB_HOST=nome-do-servico-postgres
@@ -101,6 +103,8 @@ QUEUE_CONNECTION=redis
 ```
 
 Gere a chave com `./vendor/bin/sail artisan key:generate --show`. No Dokploy, configure a porta `8080` e use `/up` como healthcheck. Como o Dokploy clona o GitHub, alterações locais precisam ser commitadas e enviadas ao repositório antes de um novo deploy.
+
+O proxy HTTPS do Dokploy deve encaminhar `X-Forwarded-Proto`. A aplicação confia nesse proxy dentro do container e força HTTPS em produção quando `APP_URL` começa com `https://`. Depois de alterar `APP_URL` ou `ASSET_URL`, reinicie/redeploye o container para reconstruir o cache de configuração.
 
 ## Administração
 
