@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreGameRequest extends FormRequest
 {
@@ -14,8 +15,8 @@ class StoreGameRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:80'],
             'company_name' => ['required', 'string', 'max:80'],
+            'office_location' => ['required', 'string', Rule::in(array_keys(config('game.office_locations')))],
         ];
     }
 }

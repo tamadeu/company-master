@@ -4,6 +4,7 @@ namespace App\Domain\Game\Actions;
 
 use App\Domain\Finance\Services\LedgerService;
 use App\Domain\Game\Services\GameAutomationClock;
+use App\Domain\Game\Services\OfficeLocationCatalog;
 use App\Models\Game;
 use App\Models\ProductTemplate;
 use App\Models\User;
@@ -15,12 +16,14 @@ class CreateGame
     public function __construct(
         private readonly LedgerService $ledger,
         private readonly GameAutomationClock $automationClock,
+        private readonly OfficeLocationCatalog $officeLocations,
     ) {}
 
-    public function execute(User $user, string $gameName, string $companyName, ?int $seed = null): Game
+    public function execute(User $user, string $gameName, string $companyName, ?int $seed = null, string $officeLocation = 'downtown'): Game
     {
-        return DB::transaction(function () use ($user, $gameName, $companyName, $seed) {
+        return DB::transaction(function () use ($user, $gameName, $companyName, $seed, $officeLocation) {
             $gameDate = CarbonImmutable::parse(config('game.initial_date'));
+            $location = $this->officeLocations->find($officeLocation);
             $game = $user->games()->create([
                 'name' => $gameName,
                 'status' => 'active',
@@ -36,7 +39,12 @@ class CreateGame
             $company = $game->company()->create([
                 'name' => $companyName,
                 'cash_balance_cents' => 0,
-                'settings' => [],
+                'settings' => [
+                    'office_location' => $location['key'],
+                    'office_location_name' => $location['name'],
+                    'office_rent_cents' => $location['rent_cents'],
+                    'office_demand_factor_basis_points' => $location['demand_factor_basis_points'],
+                ],
             ]);
 
             $capitalEntry = $company->financialEntries()->create([
@@ -91,15 +99,21 @@ class CreateGame
 
             foreach (config('game.fixed_expenses') as $expense) {
                 $dueDate = $gameDate->setDay($expense['day_of_month']);
+                $amountCents = $expense['description'] === 'Aluguel'
+                    ? $location['rent_cents']
+                    : $expense['amount_cents'];
                 $company->financialEntries()->create([
                     'type' => 'outflow',
                     'category' => 'fixed_expense',
                     'description' => $expense['description'],
-                    'amount_cents' => $expense['amount_cents'],
+                    'amount_cents' => $amountCents,
                     'game_date' => $dueDate,
                     'due_date' => $dueDate,
                     'recurring' => true,
-                    'metadata' => ['day_of_month' => $expense['day_of_month']],
+                    'metadata' => [
+                        'day_of_month' => $expense['day_of_month'],
+                        ...($expense['description'] === 'Aluguel' ? ['office_location' => $location['key']] : []),
+                    ],
                 ]);
             }
 

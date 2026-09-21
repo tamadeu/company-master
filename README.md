@@ -116,6 +116,12 @@ php artisan user:grant-admin email@exemplo.com
 
 O acesso é protegido por autenticação, verificação de e-mail e permissão administrativa. A população é um cadastro mestre compartilhado, sem vínculo com partidas. Produtos do catálogo afetam somente partidas criadas depois da alteração; produtos já movimentados permanecem preservados no histórico da empresa.
 
+## Onboarding da empresa
+
+O primeiro acesso solicita apenas o nome da empresa e o local do escritório. O nome interno da partida é gerado como `Partida #ID`. Há três localizações iniciais: Bairro Comercial (aluguel de R$ 4.000 e demanda −15%), Centro Empresarial (R$ 8.000 e demanda base) e Avenida Premium (R$ 15.000 e demanda +25%).
+
+A escolha é salva como snapshot em `company.settings`, define o lançamento recorrente de aluguel e multiplica a demanda natural de todos os produtos. Partidas existentes sem essa configuração usam demanda base de 100%.
+
 ## Caixa de entrada
 
 A Inbox em `/inbox` concentra mensagens não lidas e lidas do usuário. O sistema envia alertas sobre eventos da partida, recebimento de mercadorias, insuficiência de caixa e encerramento por vitória ou falência. Mensagens podem incluir um link interno para a ação relacionada. O usuário pode marcar toda a caixa como lida ou selecionar múltiplas mensagens da página para exclusão em massa.

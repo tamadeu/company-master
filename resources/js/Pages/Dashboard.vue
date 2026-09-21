@@ -9,6 +9,7 @@ import {
     Check,
     CircleDollarSign,
     Landmark,
+    MapPin,
     Flame,
     PackageOpen,
     Play,
@@ -45,6 +46,15 @@ interface GameSummary {
 interface CompanySummary {
     id: number;
     name: string;
+    officeLocationName: string;
+}
+
+interface OfficeLocation {
+    key: string;
+    name: string;
+    description: string;
+    rent_cents: number;
+    demand_factor_basis_points: number;
 }
 
 interface Metrics {
@@ -137,6 +147,7 @@ const props = defineProps<{
     activeEvent: ActiveEvent | null;
     dailyHistory: DailyHistoryItem[];
     manualAdvanceEnabled: boolean;
+    officeLocations: OfficeLocation[];
     flash?: {
         success?: string | null;
         daySummary?: DaySummary | null;
@@ -148,8 +159,8 @@ const tutorialOpen = ref(Boolean(props.game && !props.tutorial.completed));
 const advanceConfirmationOpen = ref(false);
 const summaryOpen = ref(Boolean(props.flash?.daySummary));
 const form = useForm({
-    name: '',
     company_name: '',
+    office_location: props.officeLocations.find((location) => location.key === 'downtown')?.key ?? props.officeLocations[0]?.key ?? '',
 });
 const advanceForm = useForm({
     game_date: props.game?.currentDate ?? '',
@@ -163,6 +174,9 @@ const moneyFormatter = new Intl.NumberFormat('pt-BR', {
 });
 
 const formatMoney = (cents: number) => moneyFormatter.format(cents / 100);
+const demandLabel = (basisPoints: number) => basisPoints === 10_000
+    ? 'Demanda média'
+    : `${basisPoints > 10_000 ? '+' : ''}${((basisPoints - 10_000) / 100).toFixed(0)}% de demanda`;
 const formatDate = (date: string) => new Intl.DateTimeFormat('pt-BR').format(new Date(`${date}T00:00:00`));
 const objectiveProgress = computed(() => {
     if (!props.metrics || props.metrics.victoryTargetCents === 0) {
@@ -248,12 +262,12 @@ const completeTutorial = () => {
             <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <h1 class="text-3xl font-bold text-[#102039] lg:text-4xl">Visão geral</h1>
-                    <p class="mt-1 text-sm text-[#657a90]">Acompanhe a fundação da empresa e prepare suas primeiras decisões.</p>
+                    <p class="mt-1 text-sm text-[#657a90]">Acompanhe a fundação da empresa e prepare suas primeiras decisões.<span v-if="company"> Escritório: {{ company.officeLocationName }}.</span></p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <button v-if="game" type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[#cfdbe4] bg-white px-4 text-sm font-bold text-[#31506d]" @click="createGameOpen = true"><Plus :size="18" /> Nova partida</button>
+                    <button v-if="game && manualAdvanceEnabled" type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[#cfdbe4] bg-white px-4 text-sm font-bold text-[#31506d]" @click="createGameOpen = true"><Plus :size="18" /> Nova empresa</button>
                     <button v-if="game && manualAdvanceEnabled" type="button" :disabled="advanceForm.processing || game.status !== 'active'" class="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#d95340] disabled:opacity-50" @click="advanceConfirmationOpen = true"><Play :size="18" fill="currentColor" /> {{ advanceForm.processing ? 'Processando...' : 'Avançar dia' }}</button>
-                    <button v-else-if="!game" type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white shadow-sm" @click="createGameOpen = true"><Plus :size="18" /> Nova partida</button>
+                    <button v-else-if="!game" type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white shadow-sm" @click="createGameOpen = true"><Plus :size="18" /> Criar empresa</button>
                 </div>
             </div>
 
@@ -407,20 +421,20 @@ const completeTutorial = () => {
                     <span class="grid size-14 place-items-center rounded-md bg-[#dff7f1] text-[#008b76]"><Store :size="28" /></span>
                     <h2 class="mt-5 text-2xl font-bold text-[#102039]">Crie sua primeira empresa</h2>
                     <p class="mt-2 max-w-xl text-sm leading-6 text-[#657a90]">Você começará em 1º de janeiro de 2026 com R$ 100 mil em caixa, cinco produtos e três fornecedores para comparar.</p>
-                    <button type="button" class="mt-6 inline-flex h-11 items-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white" @click="createGameOpen = true"><Plus :size="18" /> Criar partida</button>
+                    <button type="button" class="mt-6 inline-flex h-11 items-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white" @click="createGameOpen = true"><Plus :size="18" /> Criar empresa</button>
                 </div>
             </section>
         </div>
 
         <div v-if="createGameOpen" class="fixed inset-0 z-[70] grid place-items-center bg-[#071729]/60 p-4" @click.self="game ? (createGameOpen = false) : null">
-            <div class="w-full max-w-lg rounded-md bg-white shadow-2xl">
+            <div class="w-full max-w-3xl rounded-md bg-white shadow-2xl">
                 <div class="flex items-start justify-between border-b border-[#e2e9ee] px-6 py-5">
-                    <div><h2 class="text-xl font-bold text-[#102039]">Nova partida</h2><p class="mt-1 text-sm text-[#6b7f93]">Defina os nomes para começar sua empresa.</p></div>
+                    <div><h2 class="text-xl font-bold text-[#102039]">Configure sua empresa</h2><p class="mt-1 text-sm text-[#6b7f93]">Escolha o nome e a localização inicial do escritório.</p></div>
                     <button v-if="game" type="button" class="grid size-9 place-items-center rounded-md text-[#687d91] hover:bg-[#eef3f6]" aria-label="Fechar" @click="createGameOpen = false"><X :size="20" /></button>
                 </div>
-                <form class="space-y-5 p-6" @submit.prevent="submitGame">
-                    <div><label for="game-name" class="text-sm font-semibold text-[#29415a]">Nome da partida</label><input id="game-name" v-model="form.name" type="text" required maxlength="80" placeholder="Ex.: Primeiros passos" class="mt-2 block w-full rounded-md border-[#cdd9e2] text-sm focus:border-[#19a895] focus:ring-[#19a895]" /><p v-if="form.errors.name" class="mt-1 text-xs text-red-600">{{ form.errors.name }}</p></div>
-                    <div><label for="company-name" class="text-sm font-semibold text-[#29415a]">Nome da empresa</label><input id="company-name" v-model="form.company_name" type="text" required maxlength="80" placeholder="Ex.: Mercado Aurora" class="mt-2 block w-full rounded-md border-[#cdd9e2] text-sm focus:border-[#19a895] focus:ring-[#19a895]" /><p v-if="form.errors.company_name" class="mt-1 text-xs text-red-600">{{ form.errors.company_name }}</p></div>
+                <form class="space-y-6 p-6" @submit.prevent="submitGame">
+                    <div><label for="company-name" class="text-sm font-semibold text-[#29415a]">Nome da empresa</label><input id="company-name" v-model="form.company_name" type="text" required maxlength="80" autofocus placeholder="Ex.: Mercado Aurora" class="mt-2 block w-full rounded-md border-[#cdd9e2] text-sm focus:border-[#19a895] focus:ring-[#19a895]" /><p v-if="form.errors.company_name" class="mt-1 text-xs text-red-600">{{ form.errors.company_name }}</p></div>
+                    <fieldset><legend class="text-sm font-semibold text-[#29415a]">Local do escritório</legend><p class="mt-1 text-xs text-[#718599]">Aluguel menor reduz custos; regiões valorizadas aumentam a demanda.</p><div class="mt-3 grid gap-3 md:grid-cols-3"><label v-for="location in officeLocations" :key="location.key" class="relative cursor-pointer rounded-md border p-4 transition" :class="form.office_location === location.key ? 'border-[#18a995] bg-[#f0fbf8] ring-2 ring-[#18a995]/15' : 'border-[#d7e2ea] bg-white hover:border-[#a9bac7]'"><input v-model="form.office_location" type="radio" name="office_location" :value="location.key" class="sr-only" /><span class="flex items-start justify-between gap-2"><span class="grid size-9 place-items-center rounded-md" :class="form.office_location === location.key ? 'bg-[#d8f5ed] text-[#087c68]' : 'bg-[#eef3f6] text-[#526a80]'"><MapPin :size="18" /></span><span v-if="form.office_location === location.key" class="grid size-5 place-items-center rounded-full bg-[#18a995] text-white"><Check :size="13" /></span></span><strong class="mt-3 block text-sm text-[#19324d]">{{ location.name }}</strong><span class="mt-1 block min-h-12 text-xs leading-5 text-[#718599]">{{ location.description }}</span><span class="mt-3 block border-t border-[#dfe7ee] pt-3 text-xs text-[#526a80]"><strong class="block text-sm text-[#19324d]">{{ formatMoney(location.rent_cents) }}/mês</strong>{{ demandLabel(location.demand_factor_basis_points) }}</span></label></div><p v-if="form.errors.office_location" class="mt-2 text-xs text-red-600">{{ form.errors.office_location }}</p></fieldset>
                     <button type="submit" :disabled="form.processing" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white disabled:opacity-60"><Store :size="18" /> {{ form.processing ? 'Criando...' : 'Começar empresa' }}</button>
                 </form>
             </div>

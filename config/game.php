@@ -12,6 +12,26 @@ return [
         'days' => 180,
         'equity_cents' => 20_000_000,
     ],
+    'office_locations' => [
+        'neighborhood' => [
+            'name' => 'Bairro Comercial',
+            'description' => 'Estrutura econômica em uma região com menor circulação de clientes.',
+            'rent_cents' => 400_000,
+            'demand_factor_basis_points' => 8_500,
+        ],
+        'downtown' => [
+            'name' => 'Centro Empresarial',
+            'description' => 'Equilíbrio entre custo, acesso e potencial de demanda.',
+            'rent_cents' => 800_000,
+            'demand_factor_basis_points' => 10_000,
+        ],
+        'premium' => [
+            'name' => 'Avenida Premium',
+            'description' => 'Endereço valorizado, alto fluxo comercial e aluguel elevado.',
+            'rent_cents' => 1_500_000,
+            'demand_factor_basis_points' => 12_500,
+        ],
+    ],
     'income_statement' => [
         'operating_expense_categories' => ['fixed_expense', 'maintenance', 'operating_expense', 'payroll'],
         'sales_deduction_categories' => ['sales_deduction'],

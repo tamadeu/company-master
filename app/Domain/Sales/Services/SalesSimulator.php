@@ -64,7 +64,10 @@ class SalesSimulator
                 $seedUsed,
                 $game->current_date->toDateString().':'.$product->sku,
                 intdiv(
-                    (($eventEffects['global_demand_factor'] ?? 10_000) * ($eventEffects['products'][$product->id]['demand_factor'] ?? 10_000)) + 5_000,
+                    intdiv(
+                        (($eventEffects['global_demand_factor'] ?? 10_000) * ($eventEffects['products'][$product->id]['demand_factor'] ?? 10_000)) + 5_000,
+                        10_000,
+                    ) * ($company->settings['office_demand_factor_basis_points'] ?? 10_000) + 5_000,
                     10_000,
                 ),
             );

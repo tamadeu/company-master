@@ -21,9 +21,11 @@ class GameController extends Controller
     {
         $game = $createGame->execute(
             $request->user(),
-            $request->validated('name'),
+            'Partida',
             $request->validated('company_name'),
+            officeLocation: $request->validated('office_location'),
         );
+        $game->update(['name' => "Partida #{$game->id}"]);
 
         return redirect()->route('games.show', $game);
     }

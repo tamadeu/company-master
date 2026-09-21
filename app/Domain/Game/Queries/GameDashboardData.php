@@ -3,12 +3,16 @@
 namespace App\Domain\Game\Queries;
 
 use App\Domain\Finance\Services\IncomeStatementService;
+use App\Domain\Game\Services\OfficeLocationCatalog;
 use App\Models\Game;
 use App\Models\User;
 
 class GameDashboardData
 {
-    public function __construct(private readonly IncomeStatementService $incomeStatement) {}
+    public function __construct(
+        private readonly IncomeStatementService $incomeStatement,
+        private readonly OfficeLocationCatalog $officeLocations,
+    ) {}
 
     public function for(Game $game, User $user): array
     {
@@ -65,7 +69,9 @@ class GameDashboardData
             'company' => [
                 'id' => $company->id,
                 'name' => $company->name,
+                'officeLocationName' => $company->settings['office_location_name'] ?? 'Centro Empresarial',
             ],
+            'officeLocations' => $this->officeLocations->options(),
             'metrics' => [
                 'cashBalanceCents' => $company->cash_balance_cents,
                 'revenueCents' => $incomeStatement['revenueCents'],
