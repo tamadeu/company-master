@@ -37,7 +37,7 @@ return new class extends Migration
             $table->unique('code');
         });
 
-        app(PopulationGenerator::class)->generate();
+        app(PopulationGenerator::class)->generate(config('game.population.size'));
     }
 
     public function down(): void

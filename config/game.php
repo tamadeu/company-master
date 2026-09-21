@@ -56,13 +56,6 @@ return [
     'population' => [
         'seed' => 2_026,
         'size' => 100,
-        'first_names' => [
-            ['Ana', 'Feminino'], ['Beatriz', 'Feminino'], ['Camila', 'Feminino'], ['Carla', 'Feminino'], ['Clara', 'Feminino'],
-            ['Daniela', 'Feminino'], ['Elisa', 'Feminino'], ['Gabriela', 'Feminino'], ['Isabela', 'Feminino'], ['Julia', 'Feminino'],
-            ['Bruno', 'Masculino'], ['Caio', 'Masculino'], ['Daniel', 'Masculino'], ['Eduardo', 'Masculino'], ['Felipe', 'Masculino'],
-            ['Gabriel', 'Masculino'], ['Henrique', 'Masculino'], ['Lucas', 'Masculino'], ['Marcos', 'Masculino'], ['Rafael', 'Masculino'],
-        ],
-        'last_names' => ['Almeida', 'Barbosa', 'Cardoso', 'Costa', 'Ferreira', 'Gomes', 'Lima', 'Martins', 'Melo', 'Moreira', 'Nascimento', 'Oliveira', 'Pereira', 'Ribeiro', 'Rocha', 'Rodrigues', 'Santos', 'Silva', 'Souza', 'Vieira'],
         'locations' => [
             ['city' => 'São Paulo', 'state' => 'SP'], ['city' => 'Rio de Janeiro', 'state' => 'RJ'],
             ['city' => 'Belo Horizonte', 'state' => 'MG'], ['city' => 'Curitiba', 'state' => 'PR'],

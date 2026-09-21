@@ -2,12 +2,15 @@
 
 namespace App\Domain\Hr\Services;
 
+use App\Domain\Customers\Services\PopulationSelector;
 use App\Models\Game;
-use App\Models\PopulationNpc;
 
 class CandidateRecommendationService
 {
-    public function __construct(private readonly SalaryMatrixService $salaryMatrix) {}
+    public function __construct(
+        private readonly SalaryMatrixService $salaryMatrix,
+        private readonly PopulationSelector $population,
+    ) {}
 
     /** @return array<int, array<string, int|string>> */
     public function recommend(Game $game, string $department, string $role, int $limit = 3): array
@@ -17,33 +20,41 @@ class CandidateRecommendationService
             ->whereNotNull('population_npc_id')
             ->pluck('population_npc_id');
 
-        return PopulationNpc::query()
-            ->whereNotIn('id', $alreadyHiredNpcIds)
-            ->get()
-            ->filter(fn ($npc) => abs((int) $npc->birth_date->diffInYears($game->current_date)) <= 65)
-            ->sortBy(fn ($npc) => $this->score($game, $npc->code, $department, $role))
-            ->take($limit)
-            ->map(fn ($npc) => [
-                'populationNpcId' => $npc->id,
-                'code' => $npc->code,
-                'name' => $npc->name,
-                'age' => abs((int) $npc->birth_date->diffInYears($game->current_date)),
-                'gender' => $npc->gender,
-                'city' => $npc->city,
-                'state' => $npc->state,
-                'department' => $department,
-                'role' => $role,
-                'salaryCents' => $salaryCents,
-            ])
+        $candidates = collect();
+        $excludedIds = $alreadyHiredNpcIds->map(fn ($id) => (int) $id)->all();
+
+        for ($attempt = 0; $candidates->count() < $limit && $attempt < 100; $attempt++) {
+            $npc = $this->population->person(
+                $game->seed,
+                "candidate:{$game->current_date->toDateString()}:{$department}:{$role}:{$attempt}",
+                $excludedIds,
+            );
+
+            if (! $npc) {
+                break;
+            }
+
+            $excludedIds[] = $npc->id;
+            if (abs((int) $npc->birth_date->diffInYears($game->current_date)) > 65) {
+                continue;
+            }
+
+            $candidates->push($npc);
+        }
+
+        return $candidates->map(fn ($npc) => [
+            'populationNpcId' => $npc->id,
+            'code' => $npc->code,
+            'name' => $npc->name,
+            'age' => abs((int) $npc->birth_date->diffInYears($game->current_date)),
+            'gender' => $npc->gender,
+            'city' => $npc->city,
+            'state' => $npc->state,
+            'department' => $department,
+            'role' => $role,
+            'salaryCents' => $salaryCents,
+        ])
             ->values()
             ->all();
-    }
-
-    private function score(Game $game, string $code, string $department, string $role): int
-    {
-        return hexdec(substr(hash(
-            'sha256',
-            "{$game->seed}:{$game->current_date->toDateString()}:{$department}:{$role}:{$code}",
-        ), 0, 8));
     }
 }

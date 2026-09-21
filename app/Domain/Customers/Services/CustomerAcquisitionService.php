@@ -3,28 +3,26 @@
 namespace App\Domain\Customers\Services;
 
 use App\Models\Game;
-use App\Models\PopulationNpc;
 use App\Models\SaleItem;
 
 class CustomerAcquisitionService
 {
+    public function __construct(private readonly PopulationSelector $population) {}
+
     /** @return array{new_customers: int, customer_purchases: int} */
     public function attribute(Game $game, SaleItem $saleItem, int $quantity, int $seed): array
     {
-        $populationIds = PopulationNpc::query()->orderBy('id')->pluck('id')->all();
-        if ($populationIds === []) {
+        if (! $this->population->person($seed, 'population-availability')) {
             return ['new_customers' => 0, 'customer_purchases' => 0];
         }
 
         $quantitiesByNpc = [];
         for ($unit = 0; $unit < $quantity; $unit++) {
-            $populationIndex = $this->number(
+            $person = $this->population->person(
                 $seed,
                 "customer:{$game->current_date->toDateString()}:{$saleItem->product_id}:{$unit}",
-                0,
-                count($populationIds) - 1,
             );
-            $npcId = $populationIds[$populationIndex];
+            $npcId = $person->id;
             $quantitiesByNpc[$npcId] = ($quantitiesByNpc[$npcId] ?? 0) + 1;
         }
 
@@ -60,12 +58,5 @@ class CustomerAcquisitionService
             'new_customers' => $newCustomers,
             'customer_purchases' => count($quantitiesByNpc),
         ];
-    }
-
-    private function number(int $seed, string $context, int $minimum, int $maximum): int
-    {
-        $value = hexdec(substr(hash('sha256', "{$seed}:{$context}"), 0, 8));
-
-        return $minimum + ($value % (($maximum - $minimum) + 1));
     }
 }

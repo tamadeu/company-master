@@ -9,6 +9,7 @@ use App\Models\PopulationNpc;
 use App\Models\SaleItem;
 use App\Models\User;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 function customerGame(int $seed = 980): Game
@@ -57,4 +58,28 @@ test('population members only become customers after a purchase', function () {
         ->and($summary['units_sold'])->toBe(0)
         ->and(Customer::count())->toBe(0)
         ->and(CustomerPurchase::count())->toBe(0);
+});
+
+test('daily customer acquisition never loads the complete population', function () {
+    Config::set('game.events.daily_chance_basis_points', 0);
+    $game = customerGame();
+    foreach ($game->company->inventoryBalances as $balance) {
+        $balance->update(['quantity' => 100, 'average_cost_cents' => 1_000]);
+    }
+
+    $populationQueries = [];
+    DB::listen(function ($query) use (&$populationQueries): void {
+        if (str_contains($query->sql, 'population_npcs')) {
+            $populationQueries[] = strtolower($query->sql);
+        }
+    });
+
+    app(AdvanceDay::class)->execute($game, '2026-01-01');
+
+    $unboundedQueries = collect($populationQueries)->reject(fn (string $sql) => str_contains($sql, 'limit 1')
+        || str_contains($sql, 'min(')
+        || str_contains($sql, 'max('));
+
+    expect($populationQueries)->not->toBeEmpty()
+        ->and($unboundedQueries)->toBeEmpty();
 });

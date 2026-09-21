@@ -167,6 +167,20 @@ Preços de venda são dados cadastrais do produto e ficam em **Estoque e produto
 
 A aplicação mantém uma população global inicial de 100 NPCs fictícios e determinísticos, compartilhada por todas as partidas. A população armazena somente código, nome, nascimento, gênero, cidade, estado e email interno do jogo. CPF, RG, senha, filiação, endereço e telefones não são persistidos.
 
+Para adicionar pessoas fictícias à população global, execute o comando informando quantas novas pessoas devem ser criadas:
+
+```bash
+php artisan population:generate 9900
+```
+
+O comando adiciona registros à população existente em lotes de 500, preserva códigos únicos e pode ser executado novamente com qualquer quantidade entre 1 e 1.000.000.
+
+As bases versionadas em `resources/data/population` contêm primeiros nomes e apelidos. Para reaplicar essas bases à população já existente, preservando IDs, códigos e vínculos, execute:
+
+```bash
+php artisan population:refresh-names
+```
+
 NPCs começam como prospects e são promovidos automaticamente para clientes na primeira compra. Toda quantidade e receita de `sale_items` é decomposta em compras vinculadas a clientes. O módulo Clientes apresenta conversão da população, compras, ticket médio, valor vitalício e recorrência.
 
 Cada cliente possui uma página dedicada com recência, frequência, ranking por valor, segmento, produtos preferidos, evolução diária e histórico completo de compras.
