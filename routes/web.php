@@ -26,6 +26,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/inbox', [InboxController::class, 'index'])->name('inbox.index');
     Route::get('/inbox/{inboxMessage}', [InboxController::class, 'show'])->name('inbox.show');
     Route::delete('/inbox/{inboxMessage}', [InboxController::class, 'destroy'])->name('inbox.destroy');
+    Route::patch('/inbox/read-all', [InboxController::class, 'markAllRead'])->name('inbox.read-all');
+    Route::delete('/inbox', [InboxController::class, 'destroyBulk'])->name('inbox.destroy-bulk');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/games', [GameController::class, 'store'])->name('games.store');
     Route::get('/games/{game}', [GameController::class, 'show'])->name('games.show');

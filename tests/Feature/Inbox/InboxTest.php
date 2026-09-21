@@ -111,3 +111,32 @@ test('non administrators cannot send inbox announcements', function () {
 
     expect(InboxMessage::count())->toBe(0);
 });
+
+test('users mark all of their own inbox messages as read', function () {
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    InboxMessage::create(['recipient_user_id' => $user->id, 'category' => 'alert', 'subject' => 'Primeira', 'body' => 'Texto']);
+    InboxMessage::create(['recipient_user_id' => $user->id, 'category' => 'alert', 'subject' => 'Segunda', 'body' => 'Texto']);
+    $foreign = InboxMessage::create(['recipient_user_id' => $other->id, 'category' => 'alert', 'subject' => 'Alheia', 'body' => 'Texto']);
+
+    $this->actingAs($user)->patch(route('inbox.read-all'))->assertSessionHasNoErrors();
+
+    expect($user->inboxMessages()->whereNull('read_at')->count())->toBe(0)
+        ->and($foreign->fresh()->read_at)->toBeNull();
+});
+
+test('bulk deletion removes only selected messages owned by the user', function () {
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+    $selected = InboxMessage::create(['recipient_user_id' => $user->id, 'category' => 'alert', 'subject' => 'Excluir', 'body' => 'Texto']);
+    $kept = InboxMessage::create(['recipient_user_id' => $user->id, 'category' => 'alert', 'subject' => 'Manter', 'body' => 'Texto']);
+    $foreign = InboxMessage::create(['recipient_user_id' => $other->id, 'category' => 'alert', 'subject' => 'Alheia', 'body' => 'Texto']);
+
+    $this->actingAs($user)->delete(route('inbox.destroy-bulk'), [
+        'ids' => [$selected->id, $foreign->id],
+    ])->assertRedirect(route('inbox.index'));
+
+    expect($selected->fresh())->toBeNull()
+        ->and($kept->fresh())->not->toBeNull()
+        ->and($foreign->fresh())->not->toBeNull();
+});

@@ -118,7 +118,7 @@ O acesso é protegido por autenticação, verificação de e-mail e permissão a
 
 ## Caixa de entrada
 
-A Inbox em `/inbox` concentra mensagens não lidas e lidas do usuário. O sistema envia alertas sobre eventos da partida, recebimento de mercadorias, insuficiência de caixa e encerramento por vitória ou falência. Mensagens podem incluir um link interno para a ação relacionada.
+A Inbox em `/inbox` concentra mensagens não lidas e lidas do usuário. O sistema envia alertas sobre eventos da partida, recebimento de mercadorias, insuficiência de caixa e encerramento por vitória ou falência. Mensagens podem incluir um link interno para a ação relacionada. O usuário pode marcar toda a caixa como lida ou selecionar múltiplas mensagens da página para exclusão em massa.
 
 Super administradores usam **Administração > Mensagens** para enviar um aviso a um usuário específico ou a todos os jogadores. Cada destinatário recebe uma cópia independente, preservando seu próprio estado de leitura. A primeira versão possui somente a caixa de entrada; pastas, respostas e anexos permanecem fora do escopo.
 
@@ -219,6 +219,8 @@ As bases versionadas em `resources/data/population` contêm primeiros nomes e ap
 ```bash
 php artisan population:refresh-names
 ```
+
+O catálogo usa uma permutação determinística baseada na seed da população. Índices consecutivos percorrem regiões distantes das bases, evitando blocos alfabéticos, enquanto a permutação bijetiva mantém nomes completos únicos e resultados reproduzíveis. A listagem administrativa usa a ordem estável dos IDs, não ordenação por nome.
 
 NPCs começam como prospects e são promovidos automaticamente para clientes na primeira compra. Toda quantidade e receita de `sale_items` é decomposta em compras vinculadas a clientes. O módulo Clientes apresenta conversão da população, compras, ticket médio, valor vitalício e recorrência.
 

@@ -253,7 +253,7 @@ const completeTutorial = () => {
                 <div class="flex flex-wrap gap-2">
                     <button v-if="game" type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[#cfdbe4] bg-white px-4 text-sm font-bold text-[#31506d]" @click="createGameOpen = true"><Plus :size="18" /> Nova partida</button>
                     <button v-if="game && manualAdvanceEnabled" type="button" :disabled="advanceForm.processing || game.status !== 'active'" class="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#d95340] disabled:opacity-50" @click="advanceConfirmationOpen = true"><Play :size="18" fill="currentColor" /> {{ advanceForm.processing ? 'Processando...' : 'Avançar dia' }}</button>
-                    <button v-else type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white shadow-sm" @click="createGameOpen = true"><Plus :size="18" /> Nova partida</button>
+                    <button v-else-if="!game" type="button" class="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white shadow-sm" @click="createGameOpen = true"><Plus :size="18" /> Nova partida</button>
                 </div>
             </div>
 

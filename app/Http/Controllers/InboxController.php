@@ -31,6 +31,29 @@ class InboxController extends Controller
         return redirect()->route('inbox.index')->with('success', 'Mensagem removida da caixa de entrada.');
     }
 
+    public function markAllRead(Request $request): RedirectResponse
+    {
+        $updated = $request->user()->inboxMessages()
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return back()->with('success', "{$updated} mensagem(ns) marcada(s) como lida(s).");
+    }
+
+    public function destroyBulk(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:500'],
+            'ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+
+        $deleted = $request->user()->inboxMessages()
+            ->whereIn('id', $data['ids'])
+            ->delete();
+
+        return redirect()->route('inbox.index')->with('success', "{$deleted} mensagem(ns) excluída(s).");
+    }
+
     private function render(Request $request, ?InboxMessage $selected = null): Response
     {
         $messages = $request->user()->inboxMessages()

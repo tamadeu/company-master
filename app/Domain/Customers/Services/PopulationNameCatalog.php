@@ -13,6 +13,9 @@ class PopulationNameCatalog
     /** @var array<int, string>|null */
     private ?array $lastNames = null;
 
+    /** @var array{multiplier: int, offset: int}|null */
+    private ?array $permutation = null;
+
     /** @return array{name: string, gender: string} */
     public function personForIndex(int $index): array
     {
@@ -26,7 +29,7 @@ class PopulationNameCatalog
             throw new RuntimeException("O catálogo suporta índices entre 1 e {$capacity}.");
         }
 
-        $slot = $index - 1;
+        $slot = $this->permutedSlot($index - 1, $capacity);
         [$firstName, $gender] = $firstNames[$slot % $firstNameCount];
         $lastNameSlot = intdiv($slot, $firstNameCount);
         $firstLastNameIndex = $lastNameSlot % $lastNameCount;
@@ -124,5 +127,33 @@ class PopulationNameCatalog
     private function key(string $name): string
     {
         return mb_strtolower(Str::ascii($name));
+    }
+
+    private function permutedSlot(int $slot, int $capacity): int
+    {
+        if ($this->permutation === null) {
+            $seed = (int) config('game.population.seed');
+            $multiplier = (hexdec(substr(hash('sha256', "{$seed}:name-multiplier"), 0, 8)) % ($capacity - 1)) + 1;
+
+            while ($this->greatestCommonDivisor($multiplier, $capacity) !== 1) {
+                $multiplier = $multiplier === $capacity - 1 ? 1 : $multiplier + 1;
+            }
+
+            $this->permutation = [
+                'multiplier' => $multiplier,
+                'offset' => hexdec(substr(hash('sha256', "{$seed}:name-offset"), 0, 8)) % $capacity,
+            ];
+        }
+
+        return (($slot * $this->permutation['multiplier']) + $this->permutation['offset']) % $capacity;
+    }
+
+    private function greatestCommonDivisor(int $left, int $right): int
+    {
+        while ($right !== 0) {
+            [$left, $right] = [$right, $left % $right];
+        }
+
+        return abs($left);
     }
 }

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { BellRing, ChevronRight, CircleAlert, CircleDollarSign, Inbox, Mail, MailOpen, Megaphone, ShoppingCart, Trash2 } from '@lucide/vue';
+import { BellRing, CheckCheck, ChevronRight, CircleAlert, CircleDollarSign, Inbox, Mail, MailOpen, Megaphone, ShoppingCart, Trash2 } from '@lucide/vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
 
 interface InboxMessage {
     id: number;
@@ -16,10 +17,18 @@ interface InboxMessage {
 interface PageLink { url: string | null; label: string; active: boolean }
 interface PaginatedMessages { data: InboxMessage[]; links: PageLink[]; from: number | null; to: number | null; total: number }
 
-defineProps<{
+const props = defineProps<{
     messages: PaginatedMessages;
     selectedMessage: InboxMessage | null;
 }>();
+
+const selectedIds = ref<number[]>([]);
+const pageIds = computed(() => props.messages.data.map((message) => message.id));
+const allPageSelected = computed(() => pageIds.value.length > 0 && pageIds.value.every((id) => selectedIds.value.includes(id)));
+
+watch(() => props.messages.data, () => {
+    selectedIds.value = [];
+});
 
 const formatDate = (value: string) => new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
@@ -54,6 +63,28 @@ const removeMessage = (message: InboxMessage) => {
     }
 };
 
+const markAllRead = () => {
+    router.patch(route('inbox.read-all'), {}, { preserveScroll: true });
+};
+
+const togglePageSelection = () => {
+    selectedIds.value = allPageSelected.value ? [] : [...pageIds.value];
+};
+
+const removeSelected = () => {
+    if (selectedIds.value.length === 0 || !window.confirm(`Excluir ${selectedIds.value.length} mensagem(ns) selecionada(s)?`)) {
+        return;
+    }
+
+    router.delete(route('inbox.destroy-bulk'), {
+        data: { ids: selectedIds.value },
+        preserveScroll: true,
+        onSuccess: () => {
+            selectedIds.value = [];
+        },
+    });
+};
+
 const cleanLabel = (label: string) => ({
     'pagination.previous': 'Anterior',
     'pagination.next': 'Próxima',
@@ -64,16 +95,15 @@ const cleanLabel = (label: string) => ({
     <Head title="Caixa de entrada" />
     <AuthenticatedLayout>
         <div class="mx-auto max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-            <header class="border-b border-[#d7e2ea] pb-6">
-                <div class="flex items-center gap-2 text-xs font-bold uppercase text-[#087c68]"><Inbox :size="16" /> Comunicação</div>
-                <h1 class="mt-2 text-3xl font-bold text-[#102039]">Caixa de entrada</h1>
-                <p class="mt-1 text-sm text-[#657a90]">Alertas operacionais e avisos da administração.</p>
+            <header class="flex flex-col gap-4 border-b border-[#d7e2ea] pb-6 sm:flex-row sm:items-end sm:justify-between">
+                <div><div class="flex items-center gap-2 text-xs font-bold uppercase text-[#087c68]"><Inbox :size="16" /> Comunicação</div><h1 class="mt-2 text-3xl font-bold text-[#102039]">Caixa de entrada</h1><p class="mt-1 text-sm text-[#657a90]">Alertas operacionais e avisos da administração.</p></div>
+                <div class="flex flex-wrap gap-2"><button type="button" class="inline-flex h-10 items-center gap-2 rounded-md border border-[#cbd8e2] bg-white px-3 text-sm font-semibold text-[#31506d] hover:bg-[#f3f7f9]" @click="markAllRead"><CheckCheck :size="17" /> Marcar todas como lidas</button><button type="button" :disabled="selectedIds.length === 0" class="inline-flex h-10 items-center gap-2 rounded-md border border-[#e5c8c4] bg-white px-3 text-sm font-semibold text-[#b44b42] hover:bg-[#fff3f1] disabled:cursor-not-allowed disabled:opacity-45" @click="removeSelected"><Trash2 :size="17" /> Excluir selecionadas<span v-if="selectedIds.length">({{ selectedIds.length }})</span></button></div>
             </header>
 
             <div class="mt-6 grid min-h-[620px] overflow-hidden border border-[#dbe5ec] bg-white shadow-sm lg:grid-cols-[400px_minmax(0,1fr)]">
                 <section class="border-b border-[#dbe5ec] lg:border-b-0 lg:border-r" aria-label="Mensagens recebidas">
-                    <div class="flex h-14 items-center justify-between border-b border-[#e7edf2] px-5">
-                        <div class="text-sm font-bold text-[#19324d]">Entrada</div>
+                    <div class="flex h-14 items-center justify-between border-b border-[#e7edf2] px-4">
+                        <label class="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[#526a80]"><input type="checkbox" :checked="allPageSelected" class="rounded border-[#b9c9d5] text-[#17638d] focus:ring-[#17638d]" @change="togglePageSelection" /> Selecionar página</label>
                         <div class="text-xs text-[#718499]">{{ messages.total }} mensagem(ns)</div>
                     </div>
 
@@ -82,11 +112,7 @@ const cleanLabel = (label: string) => ({
                     </div>
 
                     <div v-else class="divide-y divide-[#edf1f4]">
-                        <Link v-for="message in messages.data" :key="message.id" :href="route('inbox.show', message.id)" class="group grid grid-cols-[38px_minmax(0,1fr)_18px] gap-3 px-4 py-4 transition hover:bg-[#f6fafc]" :class="selectedMessage?.id === message.id ? 'bg-[#edf6f8]' : ''">
-                            <span class="grid size-9 place-items-center rounded-md" :class="message.readAt ? 'bg-[#edf1f4] text-[#718499]' : 'bg-[#d9f6ef] text-[#087c68]'"><component :is="categoryIcon(message.category)" :size="18" /></span>
-                            <span class="min-w-0"><span class="flex items-center gap-2"><span class="truncate text-sm" :class="message.readAt ? 'font-semibold text-[#405970]' : 'font-bold text-[#102f4c]'">{{ message.subject }}</span><span v-if="!message.readAt" class="size-2 shrink-0 rounded-full bg-[#14a58f]"></span></span><span class="mt-1 block truncate text-xs text-[#718499]">{{ message.senderName }} · {{ formatDate(message.createdAt) }}</span><span class="mt-1 block truncate text-xs text-[#8a99a7]">{{ message.body }}</span></span>
-                            <ChevronRight :size="17" class="self-center text-[#a3b1bd] group-hover:text-[#17638d]" />
-                        </Link>
+                        <div v-for="message in messages.data" :key="message.id" class="grid grid-cols-[20px_minmax(0,1fr)] items-center gap-2 px-4 transition hover:bg-[#f6fafc]" :class="selectedMessage?.id === message.id ? 'bg-[#edf6f8]' : ''"><input v-model="selectedIds" type="checkbox" :value="message.id" :aria-label="`Selecionar ${message.subject}`" class="rounded border-[#b9c9d5] text-[#17638d] focus:ring-[#17638d]" /><Link :href="route('inbox.show', message.id)" class="group grid grid-cols-[38px_minmax(0,1fr)_18px] gap-3 py-4"><span class="grid size-9 place-items-center rounded-md" :class="message.readAt ? 'bg-[#edf1f4] text-[#718499]' : 'bg-[#d9f6ef] text-[#087c68]'"><component :is="categoryIcon(message.category)" :size="18" /></span><span class="min-w-0"><span class="flex items-center gap-2"><span class="truncate text-sm" :class="message.readAt ? 'font-semibold text-[#405970]' : 'font-bold text-[#102f4c]'">{{ message.subject }}</span><span v-if="!message.readAt" class="size-2 shrink-0 rounded-full bg-[#14a58f]"></span></span><span class="mt-1 block truncate text-xs text-[#718499]">{{ message.senderName }} · {{ formatDate(message.createdAt) }}</span><span class="mt-1 block truncate text-xs text-[#8a99a7]">{{ message.body }}</span></span><ChevronRight :size="17" class="self-center text-[#a3b1bd] group-hover:text-[#17638d]" /></Link></div>
                     </div>
 
                     <div v-if="messages.links.length > 3" class="flex flex-wrap gap-1 border-t border-[#e7edf2] p-4 text-xs"><Link v-for="link in messages.links" :key="link.label" :href="link.url ?? '#'" class="grid min-h-8 min-w-8 place-items-center rounded px-2 font-semibold" :class="link.active ? 'bg-[#173f67] text-white' : link.url ? 'border border-[#d7e2ea] text-[#526a80]' : 'text-[#b0bdc8]'">{{ cleanLabel(link.label) }}</Link></div>

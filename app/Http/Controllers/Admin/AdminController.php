@@ -172,7 +172,7 @@ class AdminController extends Controller
                     ->where('name', 'ilike', "%{$search}%")
                     ->orWhere('code', 'ilike', "%{$search}%")
                     ->orWhere('email', 'ilike', "%{$search}%")))
-                ->orderBy('name')
+                ->orderBy('id')
                 ->paginate(20)
                 ->through(fn (PopulationNpc $person) => [
                     'id' => $person->id,

@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Customers\Services\PopulationNameCatalog;
 use App\Models\PopulationNpc;
 
 test('the command adds the requested population in batches with unique sequential codes', function () {
@@ -56,3 +57,15 @@ test('the command rejects invalid population quantities', function (string $quan
 
     expect(PopulationNpc::count())->toBe(100);
 })->with(['zero' => '0', 'negative' => '-1', 'text' => 'muitas', 'above limit' => '1000001']);
+
+test('the name catalog distributes consecutive people across distant combinations deterministically', function () {
+    $catalog = app(PopulationNameCatalog::class);
+    $names = collect(range(1, 500))->map(fn (int $index) => $catalog->personForIndex($index)['name']);
+    $repeated = collect(range(1, 500))->map(fn (int $index) => $catalog->personForIndex($index)['name']);
+
+    expect($names->unique()->count())->toBe(500)
+        ->and($names->all())->toBe($repeated->all())
+        ->and($names->all())->not->toBe($names->sort()->values()->all())
+        ->and($names->map(fn (string $name) => explode(' ', $name)[0])->unique()->count())->toBeGreaterThan(100)
+        ->and($names->map(fn (string $name) => collect(explode(' ', $name))->take(-2)->implode(' '))->unique()->count())->toBeGreaterThan(100);
+});
