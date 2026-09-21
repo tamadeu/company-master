@@ -4,6 +4,7 @@ namespace App\Domain\Game\Actions;
 
 use App\Domain\Finance\Services\LedgerService;
 use App\Domain\Game\Services\GameAutomationClock;
+use App\Domain\Game\Services\GameDifficultyCatalog;
 use App\Domain\Game\Services\OfficeLocationCatalog;
 use App\Models\Game;
 use App\Models\ProductTemplate;
@@ -17,13 +18,15 @@ class CreateGame
         private readonly LedgerService $ledger,
         private readonly GameAutomationClock $automationClock,
         private readonly OfficeLocationCatalog $officeLocations,
+        private readonly GameDifficultyCatalog $difficulties,
     ) {}
 
-    public function execute(User $user, string $gameName, string $companyName, ?int $seed = null, string $officeLocation = 'downtown'): Game
+    public function execute(User $user, string $gameName, string $companyName, ?int $seed = null, string $officeLocation = 'downtown', string $difficulty = 'normal'): Game
     {
-        return DB::transaction(function () use ($user, $gameName, $companyName, $seed, $officeLocation) {
+        return DB::transaction(function () use ($user, $gameName, $companyName, $seed, $officeLocation, $difficulty) {
             $gameDate = CarbonImmutable::parse(config('game.initial_date'));
             $location = $this->officeLocations->find($officeLocation);
+            $difficultySettings = $this->difficulties->find($difficulty);
             $game = $user->games()->create([
                 'name' => $gameName,
                 'status' => 'active',
@@ -44,6 +47,9 @@ class CreateGame
                     'office_location_name' => $location['name'],
                     'office_rent_cents' => $location['rent_cents'],
                     'office_demand_factor_basis_points' => $location['demand_factor_basis_points'],
+                    'difficulty' => $difficultySettings['key'],
+                    'difficulty_name' => $difficultySettings['name'],
+                    'initial_capital_cents' => $difficultySettings['initial_capital_cents'],
                 ],
             ]);
 
@@ -51,7 +57,7 @@ class CreateGame
                 'type' => 'inflow',
                 'category' => 'initial_capital',
                 'description' => 'Capital inicial',
-                'amount_cents' => config('game.initial_capital_cents'),
+                'amount_cents' => $difficultySettings['initial_capital_cents'],
                 'game_date' => $gameDate,
             ]);
             $this->ledger->settle($capitalEntry, $gameDate);

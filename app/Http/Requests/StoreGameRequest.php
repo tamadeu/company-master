@@ -17,6 +17,7 @@ class StoreGameRequest extends FormRequest
         return [
             'company_name' => ['required', 'string', 'max:80'],
             'office_location' => ['required', 'string', Rule::in(array_keys(config('game.office_locations')))],
+            'difficulty' => ['required', 'string', Rule::in(array_keys(config('game.difficulties')))],
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Game\Services\GameDifficultyCatalog;
 use App\Domain\Game\Services\OfficeLocationCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -10,7 +11,7 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request, OfficeLocationCatalog $officeLocations): Response|RedirectResponse
+    public function index(Request $request, OfficeLocationCatalog $officeLocations, GameDifficultyCatalog $difficulties): Response|RedirectResponse
     {
         $game = $request->user()->games()->latest()->first();
 
@@ -23,6 +24,7 @@ class DashboardController extends Controller
             'game' => null,
             'company' => null,
             'officeLocations' => $officeLocations->options(),
+            'difficulties' => $difficulties->options(),
             'metrics' => null,
             'products' => [],
             'suppliers' => [],

@@ -118,9 +118,9 @@ O acesso é protegido por autenticação, verificação de e-mail e permissão a
 
 ## Onboarding da empresa
 
-O primeiro acesso solicita apenas o nome da empresa e o local do escritório. O nome interno da partida é gerado como `Partida #ID`. Há três localizações iniciais: Bairro Comercial (aluguel de R$ 4.000 e demanda −15%), Centro Empresarial (R$ 8.000 e demanda base) e Avenida Premium (R$ 15.000 e demanda +25%).
+O primeiro acesso solicita o nome da empresa, o local do escritório e a dificuldade. O nome interno da partida é gerado como `Partida #ID`. Há três localizações iniciais: Bairro Comercial (aluguel de R$ 4.000 e demanda −15%), Centro Empresarial (R$ 8.000 e demanda base) e Avenida Premium (R$ 15.000 e demanda +25%).
 
-A escolha é salva como snapshot em `company.settings`, define o lançamento recorrente de aluguel e multiplica a demanda natural de todos os produtos. Partidas existentes sem essa configuração usam demanda base de 100%.
+A dificuldade define o capital inicial: Fácil começa com R$ 200.000, Normal com R$ 100.000 e Desafiador com R$ 50.000. As escolhas são salvas como snapshot em `company.settings`; a localização define o lançamento recorrente de aluguel e multiplica a demanda natural de todos os produtos. Partidas existentes sem essas configurações usam Centro Empresarial e dificuldade Normal.
 
 ## Caixa de entrada
 

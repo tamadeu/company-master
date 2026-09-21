@@ -3,6 +3,23 @@
 return [
     'initial_date' => '2026-01-01',
     'initial_capital_cents' => 10_000_000,
+    'difficulties' => [
+        'easy' => [
+            'name' => 'Fácil',
+            'description' => 'Mais capital para experimentar estratégias com segurança.',
+            'initial_capital_cents' => 20_000_000,
+        ],
+        'normal' => [
+            'name' => 'Normal',
+            'description' => 'Equilíbrio entre margem para decisões e pressão financeira.',
+            'initial_capital_cents' => 10_000_000,
+        ],
+        'challenging' => [
+            'name' => 'Desafiador',
+            'description' => 'Caixa reduzido e pouco espaço para decisões ruins.',
+            'initial_capital_cents' => 5_000_000,
+        ],
+    ],
     'automation' => [
         'enabled' => env('GAME_AUTOMATION_ENABLED', true),
         'daily_at' => env('GAME_AUTOMATION_DAILY_AT', '00:00'),

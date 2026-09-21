@@ -24,6 +24,7 @@ class GameController extends Controller
             'Partida',
             $request->validated('company_name'),
             officeLocation: $request->validated('office_location'),
+            difficulty: $request->validated('difficulty'),
         );
         $game->update(['name' => "Partida #{$game->id}"]);
 

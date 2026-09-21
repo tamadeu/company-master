@@ -10,6 +10,7 @@ test('an authenticated user creates a game with validated server data', function
     $response = $this->actingAs($user)->post(route('games.store'), [
         'company_name' => 'Mercado Aurora',
         'office_location' => 'premium',
+        'difficulty' => 'normal',
         'cash_balance_cents' => 999_999_999,
     ]);
 
@@ -38,7 +39,20 @@ test('company onboarding rejects an unknown office location', function () {
     $this->actingAs($user)->post(route('games.store'), [
         'company_name' => 'Empresa inválida',
         'office_location' => 'lua',
+        'difficulty' => 'normal',
     ])->assertSessionHasErrors('office_location');
+
+    expect($user->games()->count())->toBe(0);
+});
+
+test('company onboarding rejects an unknown difficulty', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('games.store'), [
+        'company_name' => 'Empresa inválida',
+        'office_location' => 'downtown',
+        'difficulty' => 'impossível',
+    ])->assertSessionHasErrors('difficulty');
 
     expect($user->games()->count())->toBe(0);
 });
