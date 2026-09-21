@@ -88,7 +88,7 @@ DB_DATABASE=erpgame
 DB_USERNAME=usuario
 DB_PASSWORD=senha-forte
 
-REDIS_CLIENT=phpredis
+REDIS_CLIENT=predis
 REDIS_HOST=nome-do-servico-redis
 REDIS_PORT=6379
 REDIS_PASSWORD=null
