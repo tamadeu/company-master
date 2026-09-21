@@ -7,6 +7,8 @@ use App\Domain\Finance\Services\LedgerService;
 use App\Domain\Game\Services\DemandCalculator;
 use App\Models\Game;
 use App\Models\InventoryBalance;
+use App\Models\SaleAttribution;
+use App\Models\SaleItem;
 
 class SalesSimulator
 {
@@ -18,11 +20,12 @@ class SalesSimulator
     ) {}
 
     /** @return array{sale_id: int, revenue_cents: int, cogs_cents: int, units_sold: int, stockout_product_ids: array<int, int>, commercial_capacity_units: int, unmet_demand_units: int, new_customers: int, customer_purchases: int} */
-    public function simulate(Game $game, int $seedUsed, array $eventEffects = []): array
+    public function simulate(Game $game, int $seedUsed, array $eventEffects = [], ?array $tick = null): array
     {
         $company = $game->company;
         $sale = $company->sales()->create([
             'game_date' => $game->current_date,
+            'tick_key' => $tick['key'] ?? null,
             'status' => 'completed',
             'revenue_cents' => 0,
             'cogs_cents' => 0,
@@ -35,11 +38,37 @@ class SalesSimulator
         $newCustomers = 0;
         $customerPurchases = 0;
         $capacity = $this->salesCapacity->calculate($game, $seedUsed);
-        $remainingCapacity = $capacity['total_units'];
-        $channels = collect($capacity['channels'])->map(fn (array $channel) => [
-            ...$channel,
-            'remaining_units' => $channel['capacity_units'],
-        ])->values()->all();
+        $progressBasisPoints = (int) ($tick['progress_basis_points'] ?? 10_000);
+        $soldTodayByProduct = SaleItem::query()
+            ->whereHas('sale', fn ($query) => $query
+                ->where('company_id', $company->id)
+                ->whereDate('game_date', $game->current_date)
+                ->whereKeyNot($sale->id))
+            ->selectRaw('product_id, SUM(quantity) AS quantity')
+            ->groupBy('product_id')
+            ->pluck('quantity', 'product_id');
+        $soldToday = (int) $soldTodayByProduct->sum();
+        $cumulativeCapacity = intdiv(($capacity['total_units'] * $progressBasisPoints) + 5_000, 10_000);
+        $remainingCapacity = max(0, $cumulativeCapacity - $soldToday);
+        $attributedToday = SaleAttribution::query()
+            ->whereHas('saleItem.sale', fn ($query) => $query
+                ->where('company_id', $company->id)
+                ->whereDate('game_date', $game->current_date)
+                ->whereKeyNot($sale->id))
+            ->selectRaw('employee_id, SUM(quantity) AS quantity')
+            ->groupBy('employee_id')
+            ->get()
+            ->mapWithKeys(fn ($attribution) => [
+                $attribution->employee_id === null ? 'owner' : (string) $attribution->employee_id => (int) $attribution->quantity,
+            ]);
+        $channels = collect($capacity['channels'])->map(function (array $channel) use ($attributedToday) {
+            $key = $channel['employee_id'] === null ? 'owner' : (string) $channel['employee_id'];
+
+            return [
+                ...$channel,
+                'remaining_units' => max(0, $channel['capacity_units'] - ($attributedToday[$key] ?? 0)),
+            ];
+        })->values()->all();
         $products = $company->products()->get()->sortBy(
             fn ($product) => $this->salesCapacity->productPriority(
                 $seedUsed,
@@ -54,7 +83,7 @@ class SalesSimulator
                 ->where('product_id', $product->id)
                 ->lockForUpdate()
                 ->firstOrFail();
-            $demand = $this->demandCalculator->calculate(
+            $dailyDemand = $this->demandCalculator->calculate(
                 $product->base_daily_demand,
                 intdiv(
                     ($product->reference_price_cents * ($eventEffects['products'][$product->id]['reference_price_factor'] ?? 10_000)) + 5_000,
@@ -71,6 +100,8 @@ class SalesSimulator
                     10_000,
                 ),
             );
+            $cumulativeDemand = intdiv(($dailyDemand * $progressBasisPoints) + 5_000, 10_000);
+            $demand = max(0, $cumulativeDemand - (int) ($soldTodayByProduct[$product->id] ?? 0));
             $soldQuantity = min($demand, $balance->quantity, $remainingCapacity);
             $unmetDemandUnits += $demand - $soldQuantity;
 
@@ -135,6 +166,11 @@ class SalesSimulator
         $sale->update([
             'revenue_cents' => $revenueCents,
             'cogs_cents' => $cogsCents,
+            'commercial_capacity_units' => $capacity['total_units'],
+            'unmet_demand_units' => $unmetDemandUnits,
+            'new_customers' => $newCustomers,
+            'customer_purchases' => $customerPurchases,
+            'stockout_product_ids' => array_values(array_unique($stockoutProductIds)),
         ]);
 
         if ($revenueCents > 0) {

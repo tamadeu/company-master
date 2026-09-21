@@ -83,7 +83,12 @@ class DayProcessor
             $company->refresh();
             $event = null;
 
-            if ($payments['insufficient']) {
+            if (app()->environment('production')) {
+                $sales = $this->aggregateSales($company, $lockedGame->current_date->toDateString());
+                if (! $payments['insufficient']) {
+                    $event = $this->eventEngine->trigger($lockedGame->setRelation('company', $company), $seedUsed);
+                }
+            } elseif ($payments['insufficient']) {
                 $sales = [
                     'sale_id' => 0,
                     'revenue_cents' => 0,
@@ -240,5 +245,25 @@ class DayProcessor
     public function daySeed(int $gameSeed, string $gameDate): int
     {
         return hexdec(substr(hash('sha256', "{$gameSeed}:{$gameDate}"), 0, 8));
+    }
+
+    private function aggregateSales($company, string $gameDate): array
+    {
+        $sales = $company->sales()
+            ->whereDate('game_date', $gameDate)
+            ->with('items:id,sale_id,quantity')
+            ->get();
+
+        return [
+            'sale_id' => (int) ($sales->last()?->id ?? 0),
+            'revenue_cents' => (int) $sales->sum('revenue_cents'),
+            'cogs_cents' => (int) $sales->sum('cogs_cents'),
+            'units_sold' => (int) $sales->flatMap->items->sum('quantity'),
+            'stockout_product_ids' => $sales->pluck('stockout_product_ids')->filter()->flatten()->unique()->values()->all(),
+            'commercial_capacity_units' => (int) $sales->max('commercial_capacity_units'),
+            'unmet_demand_units' => (int) $sales->sum('unmet_demand_units'),
+            'new_customers' => (int) $sales->sum('new_customers'),
+            'customer_purchases' => (int) $sales->sum('customer_purchases'),
+        ];
     }
 }

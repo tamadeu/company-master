@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
-#[Fillable(['company_id', 'game_date', 'status', 'revenue_cents', 'cogs_cents'])]
+#[Fillable(['company_id', 'game_date', 'tick_key', 'status', 'revenue_cents', 'cogs_cents', 'commercial_capacity_units', 'unmet_demand_units', 'new_customers', 'customer_purchases', 'stockout_product_ids'])]
 class Sale extends Model
 {
     public function company(): BelongsTo
@@ -43,6 +43,11 @@ class Sale extends Model
             'game_date' => 'date',
             'revenue_cents' => 'integer',
             'cogs_cents' => 'integer',
+            'commercial_capacity_units' => 'integer',
+            'unmet_demand_units' => 'integer',
+            'new_customers' => 'integer',
+            'customer_purchases' => 'integer',
+            'stockout_product_ids' => 'array',
         ];
     }
 }

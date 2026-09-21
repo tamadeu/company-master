@@ -132,6 +132,8 @@ Super administradores usam **Administração > Mensagens** para enviar um aviso 
 
 Em produção, partidas ativas processam vendas e o fechamento diário em background à meia-noite do servidor, mesmo sem usuário autenticado ou com o navegador fechado. O scheduler verifica partidas vencidas a cada minuto para também recuperar uma virada perdida durante eventual indisponibilidade e envia jobs idempotentes para a fila Redis. No Docker de produção, Supervisor mantém web, queue worker e scheduler ativos no mesmo container. Em ambiente local, a automação não é agendada e o botão **Avançar dia** permanece disponível.
 
+As vendas idle são distribuídas ao longo do dia em ticks horários configuráveis. Cada tick realiza somente a parcela acumulada de demanda e capacidade ainda não processada, evitando multiplicar as vendas diárias. À meia-noite, o fechamento apenas consolida essas vendas, processa obrigações, entregas, compras automáticas e eventos, e avança a data do jogo.
+
 Cada processamento com vendas gera uma notificação estruturada para o proprietário da partida. O sino no cabeçalho abre `/notifications`, onde ficam faturamento, unidades vendidas, novos clientes, empresa, data do jogo e acesso direto aos registros de vendas. A notificação também aparece na Inbox geral.
 
 O horário padrão pode ser ajustado nas variáveis do Dokploy:
@@ -140,6 +142,9 @@ O horário padrão pode ser ajustado nas variáveis do Dokploy:
 GAME_AUTOMATION_ENABLED=true
 GAME_AUTOMATION_DAILY_AT=00:00
 GAME_AUTOMATION_BATCH_SIZE=100
+GAME_IDLE_SALES_ENABLED=true
+GAME_IDLE_SALES_INTERVAL_MINUTES=60
+GAME_IDLE_SALES_BATCH_SIZE=100
 ```
 
 No desenvolvimento com Sail, mantenha estes processos em terminais separados quando quiser testar a automação continuamente:

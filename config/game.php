@@ -25,6 +25,11 @@ return [
         'daily_at' => env('GAME_AUTOMATION_DAILY_AT', '00:00'),
         'dispatch_batch_size' => (int) env('GAME_AUTOMATION_BATCH_SIZE', 100),
     ],
+    'idle_sales' => [
+        'enabled' => env('GAME_IDLE_SALES_ENABLED', true),
+        'interval_minutes' => (int) env('GAME_IDLE_SALES_INTERVAL_MINUTES', 60),
+        'dispatch_batch_size' => (int) env('GAME_IDLE_SALES_BATCH_SIZE', 100),
+    ],
     'victory' => [
         'days' => 180,
         'equity_cents' => 20_000_000,

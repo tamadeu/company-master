@@ -12,4 +12,10 @@ if (app()->environment('production') && config('game.automation.enabled')) {
     Schedule::command('games:dispatch-due')
         ->everyMinute()
         ->withoutOverlapping();
+
+    if (config('game.idle_sales.enabled')) {
+        Schedule::command('sales:dispatch-idle')
+            ->everyMinute()
+            ->withoutOverlapping();
+    }
 }
