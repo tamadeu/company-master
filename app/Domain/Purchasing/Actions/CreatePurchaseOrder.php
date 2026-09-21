@@ -3,7 +3,9 @@
 namespace App\Domain\Purchasing\Actions;
 
 use App\Domain\Finance\Services\LedgerService;
+use App\Domain\Inbox\Services\InboxService;
 use App\Domain\Inventory\Services\InventoryCapacityService;
+use App\Models\Employee;
 use App\Models\Game;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
@@ -16,18 +18,23 @@ class CreatePurchaseOrder
     public function __construct(
         private readonly LedgerService $ledger,
         private readonly InventoryCapacityService $inventoryCapacity,
+        private readonly InboxService $inbox,
     ) {}
 
     /** @param array<int, array{product_id: int, quantity: int}> $items */
-    public function execute(Game $game, Supplier $supplier, array $items): PurchaseOrder
+    public function execute(Game $game, Supplier $supplier, array $items, ?Employee $buyer = null, bool $automatic = false): PurchaseOrder
     {
-        return DB::transaction(function () use ($game, $supplier, $items) {
+        return DB::transaction(function () use ($game, $supplier, $items, $buyer, $automatic) {
             $lockedGame = Game::query()->lockForUpdate()->findOrFail($game->id);
             $company = $lockedGame->company()->lockForUpdate()->firstOrFail();
             $lockedSupplier = Supplier::query()->lockForUpdate()->findOrFail($supplier->id);
 
             if ($lockedGame->status !== 'active' || $lockedSupplier->company_id !== $company->id) {
                 throw ValidationException::withMessages(['supplier_id' => 'Fornecedor inválido para esta partida.']);
+            }
+
+            if ($buyer && ($buyer->company_id !== $company->id || $buyer->status !== 'active')) {
+                throw ValidationException::withMessages(['employee_id' => 'Funcionário responsável inválido.']);
             }
 
             $normalizedItems = collect($items)
@@ -74,7 +81,9 @@ class CreatePurchaseOrder
 
             $order = $company->purchaseOrders()->create([
                 'supplier_id' => $lockedSupplier->id,
+                'employee_id' => $buyer?->id,
                 'status' => 'ordered',
+                'automatic' => $automatic,
                 'ordered_at_game_date' => $lockedGame->current_date,
                 'expected_delivery_date' => $lockedGame->current_date->copy()->addDays($lockedSupplier->lead_time_days),
                 'total_cents' => $totalCents,
@@ -95,6 +104,27 @@ class CreatePurchaseOrder
             if ($isCashPurchase) {
                 $this->ledger->settle($financialEntry, $lockedGame->current_date);
             }
+
+            $totalUnits = (int) $pricedItems->sum('quantity');
+            $this->inbox->sendSystem(
+                $lockedGame->user,
+                'purchase',
+                $automatic ? "Pedido automático #{$order->id} criado" : "Pedido de compra #{$order->id} criado",
+                $automatic
+                    ? "{$buyer->name} criou uma reposição de {$totalUnits} unidade(s) com {$lockedSupplier->name}."
+                    : "Um pedido de {$totalUnits} unidade(s) foi criado com {$lockedSupplier->name}.",
+                "/games/{$lockedGame->id}/purchases",
+                [
+                    'order_id' => $order->id,
+                    'supplier_name' => $lockedSupplier->name,
+                    'employee_id' => $buyer?->id,
+                    'employee_name' => $buyer?->name,
+                    'automatic' => $automatic,
+                    'total_units' => $totalUnits,
+                    'total_cents' => $totalCents,
+                    'game_date' => $lockedGame->current_date->toDateString(),
+                ],
+            );
 
             return $order->load('supplier', 'items.product', 'financialEntry');
         });

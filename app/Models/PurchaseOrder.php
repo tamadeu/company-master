@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
-#[Fillable(['company_id', 'supplier_id', 'status', 'ordered_at_game_date', 'expected_delivery_date', 'received_at_game_date', 'total_cents'])]
+#[Fillable(['company_id', 'supplier_id', 'employee_id', 'status', 'automatic', 'ordered_at_game_date', 'expected_delivery_date', 'received_at_game_date', 'total_cents'])]
 class PurchaseOrder extends Model
 {
     /** @use HasFactory<PurchaseOrderFactory> */
@@ -25,6 +25,11 @@ class PurchaseOrder extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
     }
 
     public function items(): HasMany
@@ -49,6 +54,7 @@ class PurchaseOrder extends Model
             'expected_delivery_date' => 'date',
             'received_at_game_date' => 'date',
             'total_cents' => 'integer',
+            'automatic' => 'boolean',
         ];
     }
 }

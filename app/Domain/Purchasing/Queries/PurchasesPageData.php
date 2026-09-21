@@ -4,6 +4,7 @@ namespace App\Domain\Purchasing\Queries;
 
 use App\Domain\Inventory\Services\InventoryCapacityService;
 use App\Models\Game;
+use App\Models\JobRole;
 
 class PurchasesPageData
 {
@@ -16,10 +17,21 @@ class PurchasesPageData
             'company.purchaseOrders.supplier',
             'company.purchaseOrders.items.product',
             'company.purchaseOrders.financialEntry',
+            'company.purchaseOrders.employee',
         ]);
 
         $company = $game->company;
         $capacity = $this->inventoryCapacity->calculate($company);
+        $purchasingCapacities = JobRole::where('department', 'Compras')->pluck('purchasing_capacity_units', 'name');
+        $buyers = $company->employees
+            ->where('status', 'active')
+            ->where('department', 'Compras')
+            ->map(fn ($employee) => [
+                'id' => $employee->id,
+                'name' => $employee->name,
+                'role' => $employee->role,
+                'capacityUnits' => (int) ($purchasingCapacities[$employee->role] ?? 0),
+            ])->values();
 
         return [
             'game' => [
@@ -33,6 +45,12 @@ class PurchasesPageData
                 'name' => $company->name,
             ],
             'cashBalanceCents' => $company->cash_balance_cents,
+            'automaticPurchasing' => [
+                'reorderPointDays' => config('game.purchasing.reorder_point_days'),
+                'targetStockDays' => config('game.purchasing.target_stock_days'),
+                'totalCapacityUnits' => (int) $buyers->sum('capacityUnits'),
+                'buyers' => $buyers,
+            ],
             'inventoryCapacity' => [
                 'capacityUnits' => $capacity['capacity_units'],
                 'stockUnits' => $capacity['stock_units'],
@@ -61,6 +79,8 @@ class PurchasesPageData
                     'id' => $order->id,
                     'supplierName' => $order->supplier->name,
                     'status' => $order->status,
+                    'automatic' => $order->automatic,
+                    'buyerName' => $order->employee?->name,
                     'orderedDate' => $order->ordered_at_game_date->toDateString(),
                     'expectedDeliveryDate' => $order->expected_delivery_date->toDateString(),
                     'receivedDate' => $order->received_at_game_date?->toDateString(),

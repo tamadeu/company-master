@@ -6,6 +6,7 @@ use App\Domain\Finance\Services\SettleDuePayables;
 use App\Domain\Finance\Services\SettleDueReceivables;
 use App\Domain\Inbox\Services\InboxService;
 use App\Domain\Inventory\Actions\ReceivePurchaseOrder;
+use App\Domain\Purchasing\Services\AutomaticPurchasingService;
 use App\Domain\Sales\Services\SalesSimulator;
 use App\Models\DailySnapshot;
 use App\Models\DayProcess;
@@ -24,6 +25,7 @@ class DayProcessor
         private readonly EventEngine $eventEngine,
         private readonly GameOutcomeService $outcomes,
         private readonly InboxService $inbox,
+        private readonly AutomaticPurchasingService $automaticPurchasing,
     ) {}
 
     public function process(Game $game, string $expectedDate): array
@@ -99,6 +101,10 @@ class DayProcessor
                 $lockedGame->setRelation('company', $company);
                 $event = $this->eventEngine->trigger($lockedGame, $seedUsed);
             }
+
+            $automaticPurchases = $payments['insufficient']
+                ? ['order_ids' => [], 'units' => 0, 'buyers' => [], 'details' => []]
+                : $this->automaticPurchasing->process($lockedGame->setRelation('company', $company));
 
             $company->refresh();
             $inventoryValueCents = (int) $company->inventoryBalances()->get()->sum(
@@ -191,6 +197,8 @@ class DayProcessor
                 'new_customers' => $sales['new_customers'],
                 'customer_purchases' => $sales['customer_purchases'],
                 'received_purchase_order_ids' => $receivedOrderIds,
+                'automatic_purchase_order_ids' => $automaticPurchases['order_ids'],
+                'automatic_purchase_units' => $automaticPurchases['units'],
                 'event' => $event ? [
                     'id' => $event->id,
                     'type' => $event->type,

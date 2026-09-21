@@ -78,13 +78,14 @@ test('an administrator can create master data', function () {
         'salary_cents' => 900000,
         'sales_capacity_units' => 0,
         'inventory_capacity_units' => 0,
+        'purchasing_capacity_units' => 12,
         'active' => true,
     ])->assertSessionHasNoErrors();
 
     expect(User::where('email', 'jogador@example.com')->exists())->toBeTrue()
         ->and(PopulationNpc::where('code', 'NPC-ADMIN')->exists())->toBeTrue()
         ->and(ProductTemplate::where('sku', 'NOV-001')->exists())->toBeTrue()
-        ->and(JobRole::where('department', 'Tecnologia')->where('name', 'Especialista')->exists())->toBeTrue();
+        ->and(JobRole::where('department', 'Tecnologia')->where('name', 'Especialista')->value('purchasing_capacity_units'))->toBe(12);
 });
 
 test('an administrator cannot remove their own access or delete linked population', function () {

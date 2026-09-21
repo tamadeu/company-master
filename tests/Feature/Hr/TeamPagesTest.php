@@ -16,7 +16,7 @@ test('the owner sees team and payroll summary', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('Team/Index')
             ->where('summary.activeEmployees', 0)
-            ->has('options.departments', 4)
+            ->has('options.departments', 5)
             ->has('options.roles', 5)
             ->has('options.salaryMatrix.Administração', 5));
 });

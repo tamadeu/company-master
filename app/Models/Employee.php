@@ -36,6 +36,11 @@ class Employee extends Model
         return $this->hasMany(SaleAttribution::class);
     }
 
+    public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
+
     protected function casts(): array
     {
         return [

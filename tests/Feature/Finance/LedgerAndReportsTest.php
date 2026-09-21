@@ -69,6 +69,65 @@ test('income statement separates purchases from operating expenses', function ()
         ->and($statement['netProfitCents'])->toBe(-2_500);
 });
 
+test('income statement presents complete subtotals and margins by competence', function () {
+    $game = app(CreateGame::class)->execute(User::factory()->create(), 'DRE completa', 'Mercado Aurora', 705);
+    $company = $game->company;
+    $company->sales()->create([
+        'game_date' => $game->current_date,
+        'status' => 'completed',
+        'revenue_cents' => 100_000,
+        'cogs_cents' => 40_000,
+    ]);
+    foreach ([
+        ['outflow', 'sales_deduction', 2_000],
+        ['outflow', 'payroll', 10_000],
+        ['outflow', 'fixed_expense', 5_000],
+        ['outflow', 'maintenance', 2_000],
+        ['outflow', 'operating_expense', 3_000],
+        ['outflow', 'depreciation', 4_000],
+        ['inflow', 'financial_income', 1_000],
+        ['outflow', 'financial_expense', 2_500],
+        ['outflow', 'income_tax', 500],
+    ] as [$type, $category, $amount]) {
+        $company->financialEntries()->create([
+            'type' => $type,
+            'category' => $category,
+            'description' => $category,
+            'amount_cents' => $amount,
+            'game_date' => $game->current_date,
+        ]);
+    }
+
+    $statement = app(IncomeStatementService::class)->calculate($company, $game->current_date);
+
+    expect($statement)->toMatchArray([
+        'grossRevenueCents' => 100_000,
+        'salesDeductionsCents' => 2_000,
+        'netRevenueCents' => 98_000,
+        'cogsCents' => 40_000,
+        'grossProfitCents' => 58_000,
+        'operatingExpensesCents' => 20_000,
+        'ebitdaCents' => 38_000,
+        'depreciationAndAmortizationCents' => 4_000,
+        'operatingProfitCents' => 34_000,
+        'financialIncomeCents' => 1_000,
+        'financialExpensesCents' => 2_500,
+        'financialResultCents' => -1_500,
+        'profitBeforeTaxCents' => 32_500,
+        'incomeTaxCents' => 500,
+        'netProfitCents' => 32_000,
+        'grossMarginBasisPoints' => 5_918,
+        'ebitdaMarginBasisPoints' => 3_877,
+        'operatingMarginBasisPoints' => 3_469,
+        'netMarginBasisPoints' => 3_265,
+    ])->and($statement['operatingExpenses'])->toBe([
+        'payrollCents' => 10_000,
+        'fixedExpensesCents' => 5_000,
+        'maintenanceCents' => 2_000,
+        'otherCents' => 3_000,
+    ]);
+});
+
 test('cash flow is derived from immutable settlements', function () {
     $game = app(CreateGame::class)->execute(User::factory()->create(), 'Fluxo', 'Mercado Aurora', 703);
     $flow = app(CashFlowService::class)->daily(

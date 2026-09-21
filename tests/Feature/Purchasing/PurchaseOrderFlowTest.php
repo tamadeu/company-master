@@ -5,6 +5,7 @@ use App\Domain\Inventory\Actions\ReceivePurchaseOrder;
 use App\Domain\Purchasing\Actions\CreatePurchaseOrder;
 use App\Models\FinancialEntry;
 use App\Models\Game;
+use App\Models\InboxMessage;
 use App\Models\InventoryMovement;
 use App\Models\PurchaseOrder;
 use App\Models\User;
@@ -27,7 +28,12 @@ test('a term purchase uses server prices and creates an account payable', functi
     expect($order->total_cents)->toBe($offer->cost_cents * 10)
         ->and($order->financialEntry->paid_at)->toBeNull()
         ->and($order->financialEntry->due_date->toDateString())->toBe('2026-01-08')
-        ->and($game->company->fresh()->cash_balance_cents)->toBe(10_000_000);
+        ->and($game->company->fresh()->cash_balance_cents)->toBe(10_000_000)
+        ->and(InboxMessage::where('recipient_user_id', $game->user_id)
+            ->where('category', 'purchase')
+            ->where('subject', "Pedido de compra #{$order->id} criado")
+            ->where('metadata->order_id', $order->id)
+            ->exists())->toBeTrue();
 });
 
 test('a cash purchase debits cash and records a paid financial entry', function () {

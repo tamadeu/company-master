@@ -6,6 +6,7 @@ import {
     Clock3,
     PackageCheck,
     ShoppingCart,
+    RefreshCw,
     Truck,
 } from '@lucide/vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
@@ -52,6 +53,8 @@ interface Order {
     id: number;
     supplierName: string;
     status: string;
+    automatic: boolean;
+    buyerName: string | null;
     orderedDate: string;
     expectedDeliveryDate: string;
     receivedDate: string | null;
@@ -70,10 +73,18 @@ interface InventoryCapacity {
     availableUnits: number;
 }
 
+interface AutomaticPurchasing {
+    reorderPointDays: number;
+    targetStockDays: number;
+    totalCapacityUnits: number;
+    buyers: Array<{ id: number; name: string; role: string; capacityUnits: number }>;
+}
+
 const props = defineProps<{
     game: GameSummary;
     company: CompanySummary;
     cashBalanceCents: number;
+    automaticPurchasing: AutomaticPurchasing;
     inventoryCapacity: InventoryCapacity;
     suppliers: Supplier[];
     orders: Order[];
@@ -161,6 +172,8 @@ const receiveOrder = (order: Order) => {
                 <p class="mt-1 text-sm text-[#657a90]">Compare fornecedores, monte pedidos e acompanhe entregas.</p>
             </div>
 
+            <section class="mb-4 flex flex-col gap-4 border-l-4 border-[#1769aa] bg-[#eef6fb] px-5 py-4 sm:flex-row sm:items-center sm:justify-between" aria-label="Reposição automática"><div class="flex items-start gap-3"><RefreshCw :size="21" class="mt-0.5 shrink-0 text-[#1769aa]" /><div><h2 class="text-sm font-bold text-[#19324d]">Reposição automática</h2><p class="mt-1 text-xs leading-5 text-[#61758a]">Dispara com até {{ automaticPurchasing.reorderPointDays }} dias de demanda em estoque e busca cobertura de {{ automaticPurchasing.targetStockDays }} dias.</p></div></div><div class="shrink-0 text-left sm:text-right"><div class="text-lg font-bold text-[#173f67]">{{ automaticPurchasing.totalCapacityUnits }} un./dia</div><div class="text-xs text-[#718599]">{{ automaticPurchasing.buyers.length }} comprador(es) ativo(s)</div></div></section>
+
             <section class="grid gap-3 md:grid-cols-3" aria-label="Fornecedores disponíveis">
                 <button
                     v-for="supplier in suppliers"
@@ -228,7 +241,7 @@ const receiveOrder = (order: Order) => {
                 <div v-else class="divide-y divide-[#edf1f4]">
                     <article v-for="order in orders" :key="order.id" class="p-5">
                         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                            <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="text-sm font-bold text-[#19324d]">Pedido #{{ order.id }}</span><span class="rounded px-2 py-1 text-[11px] font-bold" :class="order.status === 'received' ? 'bg-[#dff7f1] text-[#087c68]' : 'bg-[#fff3dd] text-[#a56500]'">{{ order.status === 'received' ? 'Recebido' : 'Aguardando entrega' }}</span></div><div class="mt-1 text-xs text-[#718599]">{{ order.supplierName }} · {{ order.items.length }} produto(s)</div></div>
+                            <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="text-sm font-bold text-[#19324d]">Pedido #{{ order.id }}</span><span class="rounded px-2 py-1 text-[11px] font-bold" :class="order.status === 'received' ? 'bg-[#dff7f1] text-[#087c68]' : 'bg-[#fff3dd] text-[#a56500]'">{{ order.status === 'received' ? 'Recebido' : 'Aguardando entrega' }}</span><span v-if="order.automatic" class="rounded bg-[#e4f0fb] px-2 py-1 text-[11px] font-bold text-[#1769aa]">Automático</span></div><div class="mt-1 text-xs text-[#718599]">{{ order.supplierName }} · {{ order.items.length }} produto(s)<span v-if="order.buyerName"> · Comprador: {{ order.buyerName }}</span></div></div>
                             <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-xs sm:grid-cols-4"><div><span class="block text-[#8a99a8]">Total</span><strong class="text-[#263e56]">{{ formatMoney(order.totalCents) }}</strong></div><div><span class="block text-[#8a99a8]">Entrega</span><strong class="text-[#263e56]">{{ formatDate(order.expectedDeliveryDate) }}</strong></div><div><span class="block text-[#8a99a8]">Pagamento</span><strong class="text-[#263e56]">{{ order.paymentStatus === 'paid' ? 'Pago' : `Vence ${formatDate(order.dueDate)}` }}</strong></div><button v-if="order.canReceive" type="button" :disabled="receivingOrderId === order.id" class="col-span-2 inline-flex h-9 items-center justify-center gap-2 rounded-md bg-[#159b87] px-3 font-bold text-white sm:col-span-1" @click="receiveOrder(order)"><PackageCheck :size="15" /> Receber</button><div v-else-if="order.status === 'ordered'" class="col-span-2 flex items-center gap-1.5 text-[#718599] sm:col-span-1"><Clock3 :size="14" /> Em trânsito</div><div v-else class="col-span-2 flex items-center gap-1.5 text-[#16836f] sm:col-span-1"><CheckCircle2 :size="14" /> No estoque</div></div>
                         </div>
                     </article>

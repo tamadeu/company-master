@@ -14,6 +14,11 @@ return [
     ],
     'income_statement' => [
         'operating_expense_categories' => ['fixed_expense', 'maintenance', 'operating_expense', 'payroll'],
+        'sales_deduction_categories' => ['sales_deduction'],
+        'depreciation_categories' => ['depreciation', 'amortization'],
+        'financial_income_categories' => ['financial_income'],
+        'financial_expense_categories' => ['financial_expense', 'interest_expense'],
+        'income_tax_categories' => ['income_tax'],
     ],
     'events' => [
         'daily_chance_basis_points' => 2_500,
@@ -27,11 +32,12 @@ return [
     ],
     'hr' => [
         'payroll_day' => 10,
-        'departments' => ['Administração', 'Comercial', 'Operações', 'Logística'],
+        'departments' => ['Administração', 'Comercial', 'Compras', 'Operações', 'Logística'],
         'roles' => ['Assistente', 'Analista', 'Coordenador', 'Gerente', 'Diretor'],
         'salary_matrix_cents' => [
             'Administração' => ['Assistente' => 250_000, 'Analista' => 380_000, 'Coordenador' => 550_000, 'Gerente' => 800_000, 'Diretor' => 1_200_000],
             'Comercial' => ['Assistente' => 270_000, 'Analista' => 420_000, 'Coordenador' => 620_000, 'Gerente' => 900_000, 'Diretor' => 1_350_000],
+            'Compras' => ['Assistente' => 260_000, 'Analista' => 400_000, 'Coordenador' => 580_000, 'Gerente' => 850_000, 'Diretor' => 1_280_000],
             'Operações' => ['Assistente' => 260_000, 'Analista' => 400_000, 'Coordenador' => 580_000, 'Gerente' => 850_000, 'Diretor' => 1_280_000],
             'Logística' => ['Assistente' => 240_000, 'Analista' => 360_000, 'Coordenador' => 520_000, 'Gerente' => 780_000, 'Diretor' => 1_150_000],
         ],
@@ -56,6 +62,17 @@ return [
             'Coordenador' => 200,
             'Gerente' => 350,
             'Diretor' => 500,
+        ],
+    ],
+    'purchasing' => [
+        'reorder_point_days' => 2,
+        'target_stock_days' => 7,
+        'capacity_by_role' => [
+            'Assistente' => 10,
+            'Analista' => 20,
+            'Coordenador' => 35,
+            'Gerente' => 50,
+            'Diretor' => 75,
         ],
     ],
     'population' => [

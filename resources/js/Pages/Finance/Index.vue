@@ -7,7 +7,30 @@ import { computed } from 'vue';
 interface GameSummary { id: number; currentDate: string; dayNumber: number; victoryDays: number }
 interface CompanySummary { id: number; name: string }
 interface FinanceSummary { cashBalanceCents: number; receivablesCents: number; payablesCents: number; overdueCents: number; nextSevenDaysCents: number }
-interface IncomeStatement { revenueCents: number; cogsCents: number; grossProfitCents: number; operatingExpensesCents: number; netProfitCents: number; grossMarginBasisPoints: number }
+interface IncomeStatement {
+    periodStart: string;
+    periodEnd: string;
+    grossRevenueCents: number;
+    salesDeductionsCents: number;
+    netRevenueCents: number;
+    cogsCents: number;
+    grossProfitCents: number;
+    operatingExpenses: { payrollCents: number; fixedExpensesCents: number; maintenanceCents: number; otherCents: number };
+    operatingExpensesCents: number;
+    ebitdaCents: number;
+    depreciationAndAmortizationCents: number;
+    operatingProfitCents: number;
+    financialIncomeCents: number;
+    financialExpensesCents: number;
+    financialResultCents: number;
+    profitBeforeTaxCents: number;
+    incomeTaxCents: number;
+    netProfitCents: number;
+    grossMarginBasisPoints: number;
+    ebitdaMarginBasisPoints: number;
+    operatingMarginBasisPoints: number;
+    netMarginBasisPoints: number;
+}
 interface CashFlowItem { date: string; inflowsCents: number; outflowsCents: number; netCents: number; balanceCents: number }
 interface Entry { id: number; type: 'inflow' | 'outflow'; category: string; description: string; amountCents: number; gameDate: string; dueDate: string | null; settledGameDate: string | null; status: 'settled' | 'overdue' | 'pending' }
 
@@ -23,6 +46,7 @@ const props = defineProps<{
 const moneyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatMoney = (cents: number) => moneyFormatter.format(cents / 100);
 const formatDate = (date: string | null) => date ? new Intl.DateTimeFormat('pt-BR').format(new Date(`${date}T00:00:00`)) : '—';
+const formatMargin = (basisPoints: number) => `${(basisPoints / 100).toFixed(2)}%`;
 const maxFlowCents = computed(() => Math.max(1, ...props.cashFlow.flatMap((item) => [item.inflowsCents, item.outflowsCents])));
 const categoryLabels: Record<string, string> = {
     initial_capital: 'Capital inicial',
@@ -33,6 +57,13 @@ const categoryLabels: Record<string, string> = {
     operating_expense: 'Despesa operacional',
     receivable: 'Conta a receber',
     payroll: 'Salário',
+    sales_deduction: 'Dedução sobre vendas',
+    depreciation: 'Depreciação',
+    amortization: 'Amortização',
+    financial_income: 'Receita financeira',
+    financial_expense: 'Despesa financeira',
+    interest_expense: 'Juros',
+    income_tax: 'Tributo sobre resultado',
 };
 </script>
 
@@ -50,7 +81,7 @@ const categoryLabels: Record<string, string> = {
                 <article class="rounded-md border border-[#dfe7ee] bg-white p-4 shadow-sm"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#fee9e7] text-[#d64b3a]"><Clock3 :size="22" /></span><div><div class="text-xs text-[#64798d]">Contas vencidas</div><div class="text-2xl font-bold text-[#102039]">{{ formatMoney(summary.overdueCents) }}</div></div></div></article>
             </section>
 
-            <section class="mt-4 grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
+            <section class="mt-4 grid gap-4 xl:grid-cols-2">
                 <div class="rounded-md border border-[#dfe7ee] bg-white shadow-sm">
                     <div class="flex items-center justify-between border-b border-[#e6edf2] px-5 py-4"><div class="flex items-center gap-2 text-sm font-bold text-[#19324d]"><Landmark :size="19" /> Fluxo de caixa</div><span class="text-xs text-[#75899c]">Últimos {{ cashFlow.length }} dia(s)</span></div>
                     <div class="space-y-3 p-5">
@@ -58,10 +89,20 @@ const categoryLabels: Record<string, string> = {
                     </div>
                 </div>
 
-                <div class="rounded-md border border-[#dfe7ee] bg-white p-5 shadow-sm">
-                    <div class="flex items-center gap-2 text-sm font-bold text-[#19324d]"><ReceiptText :size="19" /> DRE simplificada</div>
-                    <div class="mt-5 space-y-3 text-sm"><div class="flex justify-between text-[#64798d]"><span>Receita de vendas</span><strong class="text-[#263e56]">{{ formatMoney(incomeStatement.revenueCents) }}</strong></div><div class="flex justify-between text-[#64798d]"><span>(−) CMV</span><strong class="text-[#d65737]">{{ formatMoney(incomeStatement.cogsCents) }}</strong></div><div class="flex justify-between border-t border-[#e6edf2] pt-3 text-[#64798d]"><span>Lucro bruto</span><strong class="text-[#263e56]">{{ formatMoney(incomeStatement.grossProfitCents) }}</strong></div><div class="flex justify-between text-[#64798d]"><span>(−) Despesas operacionais</span><strong class="text-[#d65737]">{{ formatMoney(incomeStatement.operatingExpensesCents) }}</strong></div><div class="flex justify-between border-t-2 border-[#d7e2e9] pt-4"><span class="font-bold text-[#19324d]">Resultado líquido</span><strong class="text-lg" :class="incomeStatement.netProfitCents >= 0 ? 'text-[#087c68]' : 'text-[#d65737]'">{{ formatMoney(incomeStatement.netProfitCents) }}</strong></div></div>
-                    <div class="mt-5 rounded-md bg-[#f2f7fa] p-3 text-xs text-[#61758a]">Margem bruta: <strong class="text-[#263e56]">{{ (incomeStatement.grossMarginBasisPoints / 100).toFixed(2) }}%</strong></div>
+                <div class="overflow-hidden rounded-md border border-[#dfe7ee] bg-white shadow-sm">
+                    <div class="flex items-center justify-between border-b border-[#e6edf2] px-5 py-4"><div class="flex items-center gap-2 text-sm font-bold text-[#19324d]"><ReceiptText :size="19" /> DRE gerencial</div><span class="text-xs text-[#75899c]">{{ formatDate(incomeStatement.periodStart) }} a {{ formatDate(incomeStatement.periodEnd) }}</span></div>
+                    <div class="px-5 py-4 text-sm">
+                        <div class="space-y-2.5"><div class="flex justify-between text-[#526a80]"><span>Receita bruta de vendas</span><strong class="text-[#263e56]">{{ formatMoney(incomeStatement.grossRevenueCents) }}</strong></div><div class="flex justify-between text-[#718599]"><span>(−) Deduções sobre vendas</span><strong :class="incomeStatement.salesDeductionsCents ? 'text-[#d65737]' : 'text-[#718599]'">{{ formatMoney(incomeStatement.salesDeductionsCents) }}</strong></div><div class="flex justify-between border-t border-[#dce5ec] pt-2.5 font-bold text-[#19324d]"><span>(=) Receita líquida</span><strong>{{ formatMoney(incomeStatement.netRevenueCents) }}</strong></div><div class="flex justify-between text-[#718599]"><span>(−) Custo das mercadorias vendidas</span><strong class="text-[#d65737]">{{ formatMoney(incomeStatement.cogsCents) }}</strong></div><div class="flex justify-between border-t border-[#dce5ec] pt-2.5 font-bold text-[#19324d]"><span>(=) Lucro bruto</span><strong>{{ formatMoney(incomeStatement.grossProfitCents) }}</strong></div></div>
+
+                        <div class="mt-4 border-t border-[#dce5ec] pt-4"><div class="mb-2 text-[11px] font-bold uppercase text-[#8293a4]">Despesas operacionais</div><div class="space-y-2 text-[#718599]"><div class="flex justify-between pl-3"><span>Pessoal e folha</span><strong class="text-[#d65737]">{{ formatMoney(incomeStatement.operatingExpenses.payrollCents) }}</strong></div><div class="flex justify-between pl-3"><span>Fixas e administrativas</span><strong class="text-[#d65737]">{{ formatMoney(incomeStatement.operatingExpenses.fixedExpensesCents) }}</strong></div><div class="flex justify-between pl-3"><span>Manutenção</span><strong class="text-[#d65737]">{{ formatMoney(incomeStatement.operatingExpenses.maintenanceCents) }}</strong></div><div class="flex justify-between pl-3"><span>Outras despesas operacionais</span><strong class="text-[#d65737]">{{ formatMoney(incomeStatement.operatingExpenses.otherCents) }}</strong></div><div class="flex justify-between border-t border-[#e6edf2] pt-2.5 font-semibold text-[#526a80]"><span>Total das despesas operacionais</span><strong class="text-[#d65737]">{{ formatMoney(incomeStatement.operatingExpensesCents) }}</strong></div></div></div>
+
+                        <div class="mt-3 space-y-2.5"><div class="flex justify-between bg-[#eef6f8] px-3 py-2.5 font-bold text-[#173f67]"><span>EBITDA</span><strong :class="incomeStatement.ebitdaCents >= 0 ? 'text-[#087c68]' : 'text-[#d65737]'">{{ formatMoney(incomeStatement.ebitdaCents) }}</strong></div><div class="flex justify-between text-[#718599]"><span>(−) Depreciação e amortização</span><strong class="text-[#d65737]">{{ formatMoney(incomeStatement.depreciationAndAmortizationCents) }}</strong></div><div class="flex justify-between border-t border-[#dce5ec] pt-2.5 font-bold text-[#19324d]"><span>(=) Resultado operacional</span><strong :class="incomeStatement.operatingProfitCents >= 0 ? 'text-[#087c68]' : 'text-[#d65737]'">{{ formatMoney(incomeStatement.operatingProfitCents) }}</strong></div></div>
+
+                        <div class="mt-4 border-t border-[#dce5ec] pt-4"><div class="mb-2 text-[11px] font-bold uppercase text-[#8293a4]">Resultado financeiro e tributos</div><div class="space-y-2.5 text-[#718599]"><div class="flex justify-between"><span>(+) Receitas financeiras</span><strong class="text-[#087c68]">{{ formatMoney(incomeStatement.financialIncomeCents) }}</strong></div><div class="flex justify-between"><span>(−) Despesas financeiras</span><strong class="text-[#d65737]">{{ formatMoney(incomeStatement.financialExpensesCents) }}</strong></div><div class="flex justify-between font-semibold text-[#526a80]"><span>(=) Resultado financeiro</span><strong :class="incomeStatement.financialResultCents >= 0 ? 'text-[#087c68]' : 'text-[#d65737]'">{{ formatMoney(incomeStatement.financialResultCents) }}</strong></div><div class="flex justify-between border-t border-[#e6edf2] pt-2.5 font-bold text-[#19324d]"><span>Resultado antes dos tributos</span><strong>{{ formatMoney(incomeStatement.profitBeforeTaxCents) }}</strong></div><div class="flex justify-between"><span>(−) Tributos sobre o resultado</span><strong class="text-[#d65737]">{{ formatMoney(incomeStatement.incomeTaxCents) }}</strong></div></div></div>
+
+                        <div class="mt-4 flex justify-between border-t-2 border-[#b9cbd8] pt-4"><span class="text-base font-bold text-[#102039]">Resultado líquido</span><strong class="text-xl" :class="incomeStatement.netProfitCents >= 0 ? 'text-[#087c68]' : 'text-[#d65737]'">{{ formatMoney(incomeStatement.netProfitCents) }}</strong></div>
+                    </div>
+                    <div class="grid grid-cols-2 border-t border-[#dce5ec] bg-[#f3f7f9] text-center text-xs sm:grid-cols-4"><div class="border-r border-[#dce5ec] p-3"><div class="text-[#718599]">Margem bruta</div><strong class="mt-1 block text-[#263e56]">{{ formatMargin(incomeStatement.grossMarginBasisPoints) }}</strong></div><div class="p-3 sm:border-r sm:border-[#dce5ec]"><div class="text-[#718599]">Margem EBITDA</div><strong class="mt-1 block text-[#263e56]">{{ formatMargin(incomeStatement.ebitdaMarginBasisPoints) }}</strong></div><div class="border-r border-t border-[#dce5ec] p-3 sm:border-t-0"><div class="text-[#718599]">Margem operacional</div><strong class="mt-1 block text-[#263e56]">{{ formatMargin(incomeStatement.operatingMarginBasisPoints) }}</strong></div><div class="border-t border-[#dce5ec] p-3 sm:border-t-0"><div class="text-[#718599]">Margem líquida</div><strong class="mt-1 block" :class="incomeStatement.netMarginBasisPoints >= 0 ? 'text-[#087c68]' : 'text-[#d65737]'">{{ formatMargin(incomeStatement.netMarginBasisPoints) }}</strong></div></div>
                 </div>
             </section>
 

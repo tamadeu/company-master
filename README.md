@@ -149,6 +149,12 @@ Valores monetários e fatores de demanda são calculados com inteiros, nunca com
 
 O ambiente local usa PostgreSQL como banco principal. Redis já está preparado para cache e filas. Os testes isolados podem substituir cache, fila e sessão por drivers em memória, mas os testes de CI executam contra PostgreSQL 16.
 
+## DRE gerencial
+
+A DRE usa regime de competência e apresenta receita bruta, deduções, receita líquida, CMV, lucro bruto, despesas operacionais detalhadas, EBITDA, depreciação e amortização, resultado operacional, resultado financeiro, resultado antes de tributos, tributos e resultado líquido. Também calcula margens bruta, EBITDA, operacional e líquida em pontos-base inteiros.
+
+Compras de mercadorias não são reconhecidas diretamente como despesa: entram no estoque e são apropriadas ao CMV conforme os produtos são vendidos. Categorias ainda não movimentadas aparecem zeradas para manter a estrutura completa sem criar lançamentos fictícios.
+
 ## Escopo atual
 
 Incluído: partidas, compras, estoque, vendas, financeiro, relatórios, eventos temporários, tutorial, avanço idempotente, vitória por prazo/patrimônio e falência por obrigação sem cobertura.
@@ -181,6 +187,12 @@ O escopo é intencionalmente gerencial: folha detalhada, encargos, benefícios, 
 - funcionários ativos de Logística ampliam a capacidade: Assistente +50, Analista +100, Coordenador +200, Gerente +350 e Diretor +500 unidades;
 - o desligamento de um funcionário de Logística é bloqueado quando estoque e pedidos excederiam a capacidade restante;
 - vendas liberam vagas automaticamente ao reduzir o estoque.
+
+## Compras automáticas
+
+O departamento **Compras** executa reposições no fechamento diário. Cada cargo possui `purchasing_capacity_units`, que limita quantas unidades o funcionário pode comprar por dia: Assistente 10, Analista 20, Coordenador 35, Gerente 50 e Diretor 75 por padrão. Esses valores são editáveis em **Administração > Cargos**.
+
+A reposição considera estoque físico e pedidos em trânsito. Quando a cobertura de um produto chega a 2 dias de demanda, o sistema tenta comprar até atingir 7 dias, limitado pela capacidade diária do comprador, espaço logístico, disponibilidade do fornecedor e condições de caixa/pagamento. Funcionários mais seniores atuam primeiro. Cada pedido automático registra o funcionário responsável e aparece identificado na página **Compras**. Todo pedido criado, manual ou automático, gera uma notificação transacional na Inbox com fornecedor, unidades, valor, responsável e link para Compras.
 
 Preços de venda são dados cadastrais do produto e ficam em **Estoque e produtos**. A página **Vendas** é somente operacional: apresenta dias processados, itens, clientes atendidos, responsáveis comerciais e desempenho por produto.
 

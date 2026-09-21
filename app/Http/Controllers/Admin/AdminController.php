@@ -337,6 +337,7 @@ class AdminController extends Controller
             'salary_cents' => ['required', 'integer', 'min:1'],
             'sales_capacity_units' => ['required', 'integer', 'min:0'],
             'inventory_capacity_units' => ['required', 'integer', 'min:0'],
+            'purchasing_capacity_units' => ['required', 'integer', 'min:0'],
             'active' => ['required', 'boolean'],
         ]);
     }
