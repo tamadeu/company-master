@@ -16,14 +16,15 @@ function customerGame(int $seed = 980): Game
     return app(CreateGame::class)->execute(User::factory()->create(), 'Clientes', 'Mercado Aurora', $seed);
 }
 
-test('a game receives a deterministic fictional population without sensitive columns', function () {
-    $firstGame = customerGame(1234);
-    $firstPopulation = $firstGame->populationNpcs()->orderBy('code')->get(['code', 'name', 'birth_date', 'city', 'state'])->toArray();
-    $secondGame = customerGame(1234);
-    $secondPopulation = $secondGame->populationNpcs()->orderBy('code')->get(['code', 'name', 'birth_date', 'city', 'state'])->toArray();
+test('all games share one deterministic global population without sensitive columns', function () {
+    $firstPopulation = PopulationNpc::query()->orderBy('code')->get(['id', 'code', 'name', 'birth_date', 'city', 'state'])->toArray();
+    customerGame(1234);
+    customerGame(5678);
+    $populationAfterGames = PopulationNpc::query()->orderBy('code')->get(['id', 'code', 'name', 'birth_date', 'city', 'state'])->toArray();
 
     expect($firstPopulation)->toHaveCount(100)
-        ->and($secondPopulation)->toBe($firstPopulation)
+        ->and($populationAfterGames)->toBe($firstPopulation)
+        ->and(Schema::hasColumn('population_npcs', 'game_id'))->toBeFalse()
         ->and(Schema::hasColumn('population_npcs', 'cpf'))->toBeFalse()
         ->and(Schema::hasColumn('population_npcs', 'password'))->toBeFalse()
         ->and(Schema::hasColumn('population_npcs', 'phone'))->toBeFalse();

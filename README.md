@@ -100,6 +100,16 @@ QUEUE_CONNECTION=redis
 
 Gere a chave com `./vendor/bin/sail artisan key:generate --show`. Use `/up` como healthcheck. Como o Dokploy clona o GitHub, alterações locais precisam ser commitadas e enviadas ao repositório antes de um novo deploy.
 
+## Administração
+
+A área `/admin` funciona como super administração: gerencia todos os jogadores e suas partidas, a população global, o catálogo de produtos para novas partidas e os cargos usados por RH, vendas e logística. Depois do primeiro cadastro, conceda acesso ao administrador pelo terminal do container:
+
+```bash
+php artisan user:grant-admin email@exemplo.com
+```
+
+O acesso é protegido por autenticação, verificação de e-mail e permissão administrativa. A população é um cadastro mestre compartilhado, sem vínculo com partidas. Produtos do catálogo afetam somente partidas criadas depois da alteração; produtos já movimentados permanecem preservados no histórico da empresa.
+
 ## Arquitetura
 
 A criação de partidas fica em `app/Domain/Game/Actions/CreateGame.php`. O avanço transacional fica em `app/Domain/Game/Services/DayProcessor.php`; eventos em `app/Domain/Game/Services/EventEngine.php`; mutações de caixa passam por `app/Domain/Finance/Services/LedgerService.php`. Controllers apenas validam, autorizam, delegam operações e retornam respostas.

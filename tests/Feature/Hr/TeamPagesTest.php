@@ -2,6 +2,7 @@
 
 use App\Domain\Game\Actions\CreateGame;
 use App\Models\Employee;
+use App\Models\PopulationNpc;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -24,7 +25,7 @@ test('the owner hires and terminates through validated endpoints', function () {
     $user = User::factory()->create();
     $game = app(CreateGame::class)->execute($user, 'Equipe', 'Mercado Aurora', 961);
 
-    $npc = $game->populationNpcs()->firstOrFail();
+    $npc = PopulationNpc::query()->firstOrFail();
     $this->actingAs($user)->post(route('games.employees.store', $game), [
         'population_npc_id' => $npc->id,
         'department' => 'Administração',
@@ -75,6 +76,6 @@ test('another user cannot access or mutate the team', function () {
 
     $this->actingAs($intruder)->get(route('games.team.index', $game))->assertForbidden();
     $this->actingAs($intruder)->post(route('games.employees.store', $game), [
-        'population_npc_id' => $game->populationNpcs()->value('id'), 'department' => 'Comercial', 'role' => 'Analista',
+        'population_npc_id' => PopulationNpc::query()->value('id'), 'department' => 'Comercial', 'role' => 'Analista',
     ])->assertForbidden();
 });

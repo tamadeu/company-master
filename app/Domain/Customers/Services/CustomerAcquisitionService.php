@@ -3,6 +3,7 @@
 namespace App\Domain\Customers\Services;
 
 use App\Models\Game;
+use App\Models\PopulationNpc;
 use App\Models\SaleItem;
 
 class CustomerAcquisitionService
@@ -10,7 +11,7 @@ class CustomerAcquisitionService
     /** @return array{new_customers: int, customer_purchases: int} */
     public function attribute(Game $game, SaleItem $saleItem, int $quantity, int $seed): array
     {
-        $populationIds = $game->populationNpcs()->orderBy('id')->pluck('id')->all();
+        $populationIds = PopulationNpc::query()->orderBy('id')->pluck('id')->all();
         if ($populationIds === []) {
             return ['new_customers' => 0, 'customer_purchases' => 0];
         }

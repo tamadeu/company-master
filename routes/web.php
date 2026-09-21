@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinanceController;
@@ -42,3 +43,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [AdminController::class, 'overview'])->name('overview');
+    Route::get('/users', [AdminController::class, 'users'])->name('users.index');
+    Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
+    Route::patch('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+    Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
+    Route::get('/games', [AdminController::class, 'games'])->name('games.index');
+    Route::patch('/games/{game}', [AdminController::class, 'updateGame'])->name('games.update');
+    Route::delete('/games/{game}', [AdminController::class, 'destroyGame'])->name('games.destroy');
+    Route::get('/population', [AdminController::class, 'population'])->name('population.index');
+    Route::post('/population', [AdminController::class, 'storePopulation'])->name('population.store');
+    Route::patch('/population/{populationNpc}', [AdminController::class, 'updatePopulation'])->name('population.update');
+    Route::delete('/population/{populationNpc}', [AdminController::class, 'destroyPopulation'])->name('population.destroy');
+    Route::get('/products', [AdminController::class, 'products'])->name('products.index');
+    Route::post('/products', [AdminController::class, 'storeProduct'])->name('products.store');
+    Route::patch('/products/{productTemplate}', [AdminController::class, 'updateProduct'])->name('products.update');
+    Route::delete('/products/{productTemplate}', [AdminController::class, 'destroyProduct'])->name('products.destroy');
+    Route::get('/job-roles', [AdminController::class, 'jobRoles'])->name('job-roles.index');
+    Route::post('/job-roles', [AdminController::class, 'storeJobRole'])->name('job-roles.store');
+    Route::patch('/job-roles/{jobRole}', [AdminController::class, 'updateJobRole'])->name('job-roles.update');
+    Route::delete('/job-roles/{jobRole}', [AdminController::class, 'destroyJobRole'])->name('job-roles.destroy');
+});

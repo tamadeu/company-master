@@ -4,6 +4,7 @@ namespace App\Domain\Inventory\Services;
 
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\JobRole;
 use Illuminate\Validation\ValidationException;
 
 class InventoryCapacityService
@@ -16,7 +17,9 @@ class InventoryCapacityService
             ->where('department', 'Logística')
             ->when($excludingEmployeeId, fn ($query) => $query->whereKeyNot($excludingEmployeeId))
             ->get();
-        $roleCapacity = config('game.inventory.capacity_by_logistics_role');
+        $roleCapacity = JobRole::query()
+            ->where('department', 'Logística')
+            ->pluck('inventory_capacity_units', 'name');
         $capacityUnits = config('game.inventory.base_capacity_units') + $employees->sum(
             fn ($employee) => $roleCapacity[$employee->role] ?? 0,
         );

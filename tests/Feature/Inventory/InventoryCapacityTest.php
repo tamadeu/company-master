@@ -8,6 +8,7 @@ use App\Domain\Inventory\Services\InventoryCapacityService;
 use App\Domain\Purchasing\Actions\CreatePurchaseOrder;
 use App\Models\Employee;
 use App\Models\Game;
+use App\Models\PopulationNpc;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
@@ -19,7 +20,7 @@ function capacityGame(int $seed = 1200): Game
 function hireLogistics(Game $game, string $role, int $offset = 0): Employee
 {
     return app(HireEmployee::class)->execute($game, [
-        'population_npc_id' => $game->populationNpcs()->orderBy('id')->skip($offset)->value('id'),
+        'population_npc_id' => PopulationNpc::query()->orderBy('id')->skip($offset)->value('id'),
         'department' => 'Logística',
         'role' => $role,
     ]);

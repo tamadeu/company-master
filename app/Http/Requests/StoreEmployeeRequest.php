@@ -16,8 +16,14 @@ class StoreEmployeeRequest extends FormRequest
     {
         return [
             'population_npc_id' => ['required', 'integer', 'exists:population_npcs,id'],
-            'department' => ['required', 'string', Rule::in(config('game.hr.departments'))],
-            'role' => ['required', 'string', Rule::in(config('game.hr.roles'))],
+            'department' => ['required', 'string', Rule::exists('job_roles', 'department')->where('active', true)],
+            'role' => [
+                'required',
+                'string',
+                Rule::exists('job_roles', 'name')
+                    ->where('department', $this->string('department')->toString())
+                    ->where('active', true),
+            ],
         ];
     }
 }

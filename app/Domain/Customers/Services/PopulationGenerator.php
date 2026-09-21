@@ -2,15 +2,20 @@
 
 namespace App\Domain\Customers\Services;
 
-use App\Models\Game;
+use App\Models\PopulationNpc;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PopulationGenerator
 {
-    public function generate(Game $game): void
+    public function generate(): void
     {
+        if (PopulationNpc::query()->exists()) {
+            return;
+        }
+
+        $seed = config('game.population.seed');
         $firstNames = config('game.population.first_names');
         $lastNames = config('game.population.last_names');
         $locations = config('game.population.locations');
@@ -19,17 +24,16 @@ class PopulationGenerator
         $now = now();
 
         foreach (range(1, config('game.population.size')) as $index) {
-            [$firstName, $gender] = $firstNames[$this->number($game->seed, "first-name:{$index}", 0, count($firstNames) - 1)];
+            [$firstName, $gender] = $firstNames[$this->number($seed, "first-name:{$index}", 0, count($firstNames) - 1)];
             $firstLastName = $lastNames[($index - 1) % count($lastNames)];
-            $secondLastName = $lastNames[$this->number($game->seed, "last-name:{$index}", 0, count($lastNames) - 1)];
+            $secondLastName = $lastNames[$this->number($seed, "last-name:{$index}", 0, count($lastNames) - 1)];
             $name = "{$firstName} {$firstLastName} {$secondLastName}";
-            $location = $locations[$this->number($game->seed, "location:{$index}", 0, count($locations) - 1)];
-            $age = $this->number($game->seed, "age:{$index}", 18, 75);
-            $birthDate = $initialDate->subYears($age)->subDays($this->number($game->seed, "birth-day:{$index}", 0, 364));
+            $location = $locations[$this->number($seed, "location:{$index}", 0, count($locations) - 1)];
+            $age = $this->number($seed, "age:{$index}", 18, 75);
+            $birthDate = $initialDate->subYears($age)->subDays($this->number($seed, "birth-day:{$index}", 0, 364));
             $code = sprintf('NPC-%04d', $index);
 
             $rows[] = [
-                'game_id' => $game->id,
                 'code' => $code,
                 'name' => $name,
                 'birth_date' => $birthDate->toDateString(),

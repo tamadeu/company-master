@@ -3,6 +3,7 @@
 namespace App\Domain\Hr\Services;
 
 use App\Models\Game;
+use App\Models\PopulationNpc;
 
 class CandidateRecommendationService
 {
@@ -16,7 +17,7 @@ class CandidateRecommendationService
             ->whereNotNull('population_npc_id')
             ->pluck('population_npc_id');
 
-        return $game->populationNpcs()
+        return PopulationNpc::query()
             ->whereNotIn('id', $alreadyHiredNpcIds)
             ->get()
             ->filter(fn ($npc) => abs((int) $npc->birth_date->diffInYears($game->current_date)) <= 65)

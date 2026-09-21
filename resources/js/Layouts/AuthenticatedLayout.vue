@@ -14,6 +14,7 @@ import {
     LogOut,
     Menu,
     Package,
+    ShieldCheck,
     ShoppingCart,
     Store,
     UserRound,
@@ -49,8 +50,15 @@ const overviewUrl = computed(() =>
 );
 
 const availableNavigation = computed(() => {
+    const adminNavigation = page.props.auth.user.is_admin
+        ? [{ label: 'Administração', icon: ShieldCheck, href: route('admin.overview'), active: route().current('admin.*') }]
+        : [];
+
     if (!game.value) {
-        return [{ label: 'Visão geral', icon: LayoutDashboard, href: overviewUrl.value, active: true }];
+        return [
+            { label: 'Visão geral', icon: LayoutDashboard, href: overviewUrl.value, active: route().current('dashboard') },
+            ...adminNavigation,
+        ];
     }
 
     return [
@@ -62,6 +70,7 @@ const availableNavigation = computed(() => {
         { label: 'Financeiro', icon: CircleDollarSign, href: route('games.finance.index', game.value.id), active: route().current('games.finance.*') },
         { label: 'Relatórios', icon: FileChartColumn, href: route('games.reports.index', game.value.id), active: route().current('games.reports.*') },
         { label: 'Equipe', icon: Users, href: route('games.team.index', game.value.id), active: route().current('games.team.*') || route().current('games.employees.*') },
+        ...adminNavigation,
     ];
 });
 
@@ -177,7 +186,7 @@ const unavailableNavigation: Array<{ label: string; icon: typeof CircleDollarSig
                             </span>
                             <span class="hidden md:block">
                                 <span class="block max-w-36 truncate text-xs font-bold text-[#1d334d]">{{ page.props.auth.user.name }}</span>
-                                <span class="block text-[11px] text-[#7a8da0]">Gestor</span>
+                                <span class="block text-[11px] text-[#7a8da0]">{{ page.props.auth.user.is_admin ? 'Administrador' : 'Gestor' }}</span>
                             </span>
                             <ChevronDown :size="15" class="hidden text-[#7a8da0] md:block" />
                         </button>

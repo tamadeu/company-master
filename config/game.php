@@ -54,6 +54,7 @@ return [
         ],
     ],
     'population' => [
+        'seed' => 2_026,
         'size' => 100,
         'first_names' => [
             ['Ana', 'Feminino'], ['Beatriz', 'Feminino'], ['Camila', 'Feminino'], ['Carla', 'Feminino'], ['Clara', 'Feminino'],

@@ -2,9 +2,9 @@
 
 namespace App\Domain\Game\Actions;
 
-use App\Domain\Customers\Services\PopulationGenerator;
 use App\Domain\Finance\Services\LedgerService;
 use App\Models\Game;
+use App\Models\ProductTemplate;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +13,6 @@ class CreateGame
 {
     public function __construct(
         private readonly LedgerService $ledger,
-        private readonly PopulationGenerator $populationGenerator,
     ) {}
 
     public function execute(User $user, string $gameName, string $companyName, ?int $seed = null): Game
@@ -44,23 +43,27 @@ class CreateGame
             $this->ledger->settle($capitalEntry, $gameDate);
             $company->refresh();
 
-            $products = collect(config('game.products'))->mapWithKeys(function (array $definition) use ($company) {
-                $product = $company->products()->create([
-                    'sku' => $definition['sku'],
-                    'name' => $definition['name'],
-                    'sale_price_cents' => $definition['reference_price_cents'],
-                    'reference_price_cents' => $definition['reference_price_cents'],
-                    'base_daily_demand' => $definition['base_daily_demand'],
-                ]);
+            $products = ProductTemplate::query()
+                ->where('active', true)
+                ->orderBy('id')
+                ->get()
+                ->mapWithKeys(function (ProductTemplate $definition) use ($company) {
+                    $product = $company->products()->create([
+                        'sku' => $definition->sku,
+                        'name' => $definition->name,
+                        'sale_price_cents' => $definition->reference_price_cents,
+                        'reference_price_cents' => $definition->reference_price_cents,
+                        'base_daily_demand' => $definition->base_daily_demand,
+                    ]);
 
-                $company->inventoryBalances()->create([
-                    'product_id' => $product->id,
-                    'quantity' => 0,
-                    'average_cost_cents' => 0,
-                ]);
+                    $company->inventoryBalances()->create([
+                        'product_id' => $product->id,
+                        'quantity' => 0,
+                        'average_cost_cents' => 0,
+                    ]);
 
-                return [$definition['sku'] => ['model' => $product, 'base_cost_cents' => $definition['base_cost_cents']]];
-            });
+                    return [$definition->sku => ['model' => $product, 'base_cost_cents' => $definition->base_cost_cents]];
+                });
 
             foreach (config('game.suppliers') as $definition) {
                 $supplier = $company->suppliers()->create([
@@ -93,8 +96,6 @@ class CreateGame
                     'metadata' => ['day_of_month' => $expense['day_of_month']],
                 ]);
             }
-
-            $this->populationGenerator->generate($game);
 
             return $game->load('company.products', 'company.suppliers.products', 'company.inventoryBalances', 'company.financialEntries');
         });

@@ -7,6 +7,7 @@ use App\Domain\Hr\Actions\HireEmployee;
 use App\Domain\Hr\Actions\TerminateEmployee;
 use App\Models\Employee;
 use App\Models\Game;
+use App\Models\PopulationNpc;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Validation\ValidationException;
@@ -19,7 +20,7 @@ function hrGame(): Game
 function hrHireData(Game $game, string $department, string $role, int $offset = 0): array
 {
     return [
-        'population_npc_id' => $game->populationNpcs()->orderBy('id')->skip($offset)->value('id'),
+        'population_npc_id' => PopulationNpc::query()->orderBy('id')->skip($offset)->value('id'),
         'department' => $department,
         'role' => $role,
     ];

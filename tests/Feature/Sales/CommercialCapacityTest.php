@@ -7,6 +7,7 @@ use App\Domain\Hr\Actions\HireEmployee;
 use App\Domain\Hr\Actions\TerminateEmployee;
 use App\Domain\Sales\Services\SalesCapacityService;
 use App\Models\Game;
+use App\Models\PopulationNpc;
 use App\Models\SaleAttribution;
 use App\Models\SaleItem;
 use App\Models\User;
@@ -38,7 +39,7 @@ test('active commercial employees increase capacity and receive sales attributio
     Config::set('game.events.daily_chance_basis_points', 0);
     $game = commercialGame();
     $employee = app(HireEmployee::class)->execute($game, [
-        'population_npc_id' => $game->populationNpcs()->orderBy('id')->value('id'),
+        'population_npc_id' => PopulationNpc::query()->orderBy('id')->value('id'),
         'department' => 'Comercial', 'role' => 'Analista',
     ]);
     $seedUsed = app(DayProcessor::class)->daySeed($game->seed, '2026-01-01');
@@ -57,11 +58,11 @@ test('active commercial employees increase capacity and receive sales attributio
 test('terminated and non commercial employees do not increase capacity', function () {
     $game = commercialGame();
     $commercial = app(HireEmployee::class)->execute($game, [
-        'population_npc_id' => $game->populationNpcs()->orderBy('id')->value('id'),
+        'population_npc_id' => PopulationNpc::query()->orderBy('id')->value('id'),
         'department' => 'Comercial', 'role' => 'Gerente',
     ]);
     app(HireEmployee::class)->execute($game, [
-        'population_npc_id' => $game->populationNpcs()->orderBy('id')->skip(1)->value('id'),
+        'population_npc_id' => PopulationNpc::query()->orderBy('id')->skip(1)->value('id'),
         'department' => 'Operações', 'role' => 'Gerente',
     ]);
     app(TerminateEmployee::class)->execute($game, $commercial);

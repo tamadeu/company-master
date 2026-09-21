@@ -24,10 +24,6 @@ class HireEmployee
 
             $company = $lockedGame->company()->lockForUpdate()->firstOrFail();
             $npc = PopulationNpc::query()->lockForUpdate()->findOrFail($data['population_npc_id']);
-            if ($npc->game_id !== $lockedGame->id) {
-                throw ValidationException::withMessages(['population_npc_id' => 'Candidato inválido para esta partida.']);
-            }
-
             if ($company->employees()->where('population_npc_id', $npc->id)->exists()) {
                 throw ValidationException::withMessages(['population_npc_id' => 'Este candidato já foi contratado.']);
             }

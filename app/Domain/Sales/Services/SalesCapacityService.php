@@ -3,6 +3,7 @@
 namespace App\Domain\Sales\Services;
 
 use App\Models\Game;
+use App\Models\JobRole;
 
 class SalesCapacityService
 {
@@ -20,13 +21,15 @@ class SalesCapacityService
                 1,
                 PHP_INT_MAX,
             ));
-        $roleCapacities = config('game.sales.commercial_capacity_by_role');
+        $roleCapacities = JobRole::query()
+            ->where('department', 'Comercial')
+            ->pluck('sales_capacity_units', 'name');
         $minimumFactor = config('game.sales.productivity_min_basis_points');
         $maximumFactor = config('game.sales.productivity_max_basis_points');
         $channels = [];
 
         foreach ($employees as $employee) {
-            $baseCapacity = $roleCapacities[$employee->role] ?? $roleCapacities['Assistente'];
+            $baseCapacity = $roleCapacities[$employee->role] ?? 0;
             $productivityFactor = $this->number(
                 $seed,
                 "employee-productivity:{$game->current_date->toDateString()}:{$employee->id}",

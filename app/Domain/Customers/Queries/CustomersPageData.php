@@ -4,6 +4,7 @@ namespace App\Domain\Customers\Queries;
 
 use App\Models\CustomerPurchase;
 use App\Models\Game;
+use App\Models\PopulationNpc;
 
 class CustomersPageData
 {
@@ -12,7 +13,7 @@ class CustomersPageData
         $game->load(['company.customers.populationNpc', 'company.customers.purchases']);
         $company = $game->company;
         $customers = $company->customers;
-        $populationCount = $game->populationNpcs()->count();
+        $populationCount = PopulationNpc::count();
         $customerNpcIds = $customers->pluck('population_npc_id');
         $purchases = CustomerPurchase::query()
             ->with(['customer.populationNpc', 'saleItem.product'])
@@ -56,7 +57,7 @@ class CustomersPageData
                     ? intdiv($customer->lifetime_value_cents, $customer->purchase_count)
                     : 0,
             ])->values(),
-            'prospects' => $game->populationNpcs()
+            'prospects' => PopulationNpc::query()
                 ->whereNotIn('id', $customerNpcIds)
                 ->orderBy('code')
                 ->take(20)

@@ -7,6 +7,7 @@ use App\Domain\Hr\Services\SalaryMatrixService;
 use App\Domain\Inventory\Services\InventoryCapacityService;
 use App\Domain\Sales\Services\SalesCapacityService;
 use App\Models\Game;
+use App\Models\JobRole;
 
 class TeamPageData
 {
@@ -32,6 +33,7 @@ class TeamPageData
         $daySeed = hexdec(substr(hash('sha256', "{$game->seed}:{$game->current_date->toDateString()}"), 0, 8));
         $capacity = $this->salesCapacity->calculate($game, $daySeed);
         $inventoryCapacity = $this->inventoryCapacity->calculate($company);
+        $jobRoles = JobRole::query()->where('active', true)->orderBy('salary_cents')->get();
 
         return [
             'game' => [
@@ -76,8 +78,8 @@ class TeamPageData
                         ->first()?->due_date?->toDateString(),
                 ])->values(),
             'options' => [
-                'departments' => config('game.hr.departments'),
-                'roles' => config('game.hr.roles'),
+                'departments' => $jobRoles->pluck('department')->unique()->values()->all(),
+                'roles' => $jobRoles->pluck('name')->unique()->values()->all(),
                 'payrollDay' => config('game.hr.payroll_day'),
                 'salaryMatrix' => $this->salaryMatrix->matrix(),
             ],
