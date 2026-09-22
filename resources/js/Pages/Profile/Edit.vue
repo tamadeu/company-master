@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import DeleteUserForm from './Partials/DeleteUserForm.vue';
+import DangerZone from './Partials/DangerZone.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import { Head } from '@inertiajs/vue3';
@@ -42,9 +42,9 @@ defineProps<{
                 </div>
 
                 <div
-                    class="bg-white p-4 shadow sm:rounded-lg sm:p-8"
+                    class="border border-[#f1c5bf] bg-white p-4 shadow sm:rounded-lg sm:p-8"
                 >
-                    <DeleteUserForm class="max-w-xl" />
+                    <DangerZone />
                 </div>
             </div>
         </div>

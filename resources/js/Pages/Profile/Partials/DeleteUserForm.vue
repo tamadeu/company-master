@@ -41,13 +41,13 @@ const closeModal = () => {
 </script>
 
 <template>
-    <section class="space-y-6">
-        <header>
-            <h2 class="text-lg font-medium text-gray-900">
+    <section class="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <header class="max-w-2xl">
+            <h3 class="text-sm font-bold text-[#8f2f27]">
                 Excluir conta
-            </h2>
+            </h3>
 
-            <p class="mt-1 text-sm text-gray-600">
+            <p class="mt-1 text-sm leading-6 text-[#765f5d]">
                 A exclusão da conta remove permanentemente todos os seus dados.
             </p>
         </header>

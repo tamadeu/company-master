@@ -13,12 +13,15 @@ import {
     PackageOpen,
     Play,
     Plus,
+    ShoppingCart,
     Store,
+    Tags,
     Target,
     TriangleAlert,
     TrendingUp,
     Truck,
     Trophy,
+    UserPlus,
     WalletCards,
     X,
 } from '@lucide/vue';
@@ -157,6 +160,15 @@ interface ProductSales {
     unitsSold: number;
 }
 
+interface OperationalAlert {
+    id: string;
+    type: 'stockout' | 'low_stock' | 'event' | 'payable';
+    severity: 'critical' | 'warning';
+    title: string;
+    description: string;
+    area: 'inventory' | 'purchases' | 'finance';
+}
+
 const props = defineProps<{
     games: GameListItem[];
     game: GameSummary | null;
@@ -170,6 +182,8 @@ const props = defineProps<{
     dailyHistory: DailyHistoryItem[];
     upcomingDeliveries: UpcomingDelivery[];
     salesByProduct: ProductSales[];
+    operationalAlerts: OperationalAlert[];
+    startNewGame: boolean;
     manualAdvanceEnabled: boolean;
     officeLocations: OfficeLocation[];
     difficulties: Difficulty[];
@@ -179,8 +193,9 @@ const props = defineProps<{
     };
 }>();
 
-const createGameOpen = ref(props.game === null);
+const createGameOpen = ref(props.game === null || props.startNewGame);
 const tutorialOpen = ref(Boolean(props.game && !props.tutorial.completed));
+const tutorialStep = ref(0);
 const advanceConfirmationOpen = ref(false);
 const summaryOpen = ref(Boolean(props.flash?.daySummary));
 const form = useForm({
@@ -218,6 +233,41 @@ const missionProgress = computed(() => {
 
     return [props.mission.stockPurchased, props.mission.firstDayCompleted].filter(Boolean).length;
 });
+const tutorialSteps = computed(() => [
+    {
+        title: 'Compre seu primeiro estoque',
+        description: 'Acesse Compras, compare custo, prazo e confiabilidade dos fornecedores e faça um pedido para os produtos que deseja vender.',
+        tip: 'Sem unidades disponíveis, nenhuma demanda pode virar venda.',
+        icon: ShoppingCart,
+        tone: 'bg-[#e4f0fb] text-[#1769aa]',
+    },
+    {
+        title: 'Defina os preços de venda',
+        description: 'Em Vendas, ajuste o preço de cada produto considerando o custo e o preço de referência do mercado.',
+        tip: 'Preços altos aumentam a margem, mas podem reduzir a demanda.',
+        icon: Tags,
+        tone: 'bg-[#dff7f1] text-[#087c68]',
+    },
+    {
+        title: 'Contrate um Assistente Comercial',
+        description: 'Em Equipe, escolha o departamento Comercial e o cargo Assistente para ampliar sua capacidade diária de vendas.',
+        tip: 'Cada Assistente Comercial adiciona 8 unidades de capacidade.',
+        icon: UserPlus,
+        tone: 'bg-[#fff0e9] text-[#d65c2f]',
+    },
+    {
+        title: props.manualAdvanceEnabled ? 'Avance o dia e analise' : 'Acompanhe o dia em tempo real',
+        description: props.manualAdvanceEnabled
+            ? 'Avance o dia para receber entregas, processar vendas e conferir o impacto das suas decisões.'
+            : 'Na produção, um dia da partida dura um dia real. As vendas são processadas gradualmente durante o dia e, à meia-noite, o período é fechado e a data avança.',
+        tip: props.manualAdvanceEnabled
+            ? 'Use os indicadores e alertas do painel para decidir o próximo ajuste.'
+            : 'Não é possível acelerar o relógio. Prepare estoque, preços e equipe enquanto acompanha os resultados do dia.',
+        icon: TrendingUp,
+        tone: 'bg-[#eef3e7] text-[#567b2f]',
+    },
+]);
+const currentTutorialStep = computed(() => tutorialSteps.value[tutorialStep.value]);
 
 const cashFlowSeries = computed(() => props.dailyHistory.map((item) => ({
     date: item.date,
@@ -280,6 +330,25 @@ const deliveryLabel = (date: string) => {
 
     return `Em ${difference} dias`;
 };
+const alertHref = (alert: OperationalAlert) => {
+    if (!props.game) {
+        return '#';
+    }
+
+    const routeNames = {
+        inventory: 'games.inventory.index',
+        purchases: 'games.purchases.index',
+        finance: 'games.finance.index',
+    };
+
+    return route(routeNames[alert.area], props.game.id);
+};
+const alertIcon = (alert: OperationalAlert) => {
+    if (alert.type === 'event') return Flame;
+    if (alert.type === 'payable') return CircleDollarSign;
+
+    return Boxes;
+};
 
 const metricCards = computed(() => {
     if (!props.metrics) {
@@ -327,7 +396,7 @@ const submitAdvance = () => {
     });
 };
 
-const completeTutorial = () => {
+const completeTutorial = (openPurchases = false) => {
     if (!props.game) {
         return;
     }
@@ -336,6 +405,10 @@ const completeTutorial = () => {
         preserveScroll: true,
         onSuccess: () => {
             tutorialOpen.value = false;
+
+            if (openPurchases && props.game) {
+                router.visit(route('games.purchases.index', props.game.id));
+            }
         },
     });
 };
@@ -488,7 +561,7 @@ const completeTutorial = () => {
                     </div>
                 </section>
 
-                <section class="mt-4 grid gap-4 lg:grid-cols-2">
+                <section class="mt-4 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                     <div class="min-w-0 rounded-md border border-[#dfe7ee] bg-white shadow-sm">
                         <div class="flex items-center justify-between border-b border-[#e6edf2] px-5 py-4">
                             <div class="flex items-center gap-2 text-sm font-bold text-[#19324d]"><Truck :size="19" class="text-[#1769aa]" /> Próximas entregas</div>
@@ -529,6 +602,28 @@ const completeTutorial = () => {
                         </div>
                         <div v-else class="grid min-h-48 place-items-center px-6 py-8 text-center">
                             <div><Boxes :size="28" class="mx-auto text-[#9aabb9]" /><p class="mt-3 text-sm font-semibold text-[#526a80]">Nenhuma venda registrada</p><p class="mt-1 text-xs text-[#8393a3]">O desempenho dos produtos aparecerá aqui.</p></div>
+                        </div>
+                    </div>
+
+                    <div class="min-w-0 rounded-md border border-[#dfe7ee] bg-white shadow-sm lg:col-span-2 xl:col-span-1">
+                        <div class="flex items-center justify-between border-b border-[#e6edf2] px-5 py-4">
+                            <div class="flex items-center gap-2 text-sm font-bold text-[#19324d]"><TriangleAlert :size="19" class="text-[#e85d4a]" /> Alertas operacionais</div>
+                            <span v-if="operationalAlerts.length" class="rounded bg-[#fff0ed] px-2 py-0.5 text-[10px] font-bold text-[#c44032]">{{ operationalAlerts.length }}</span>
+                        </div>
+                        <div v-if="operationalAlerts.length" class="divide-y divide-[#edf1f4]">
+                            <Link v-for="alert in operationalAlerts" :key="alert.id" :href="alertHref(alert)" class="flex items-start gap-3 px-5 py-3.5 transition hover:bg-[#f8fafc]">
+                                <span class="grid size-9 shrink-0 place-items-center rounded-md" :class="alert.severity === 'critical' ? 'bg-[#fff0ed] text-[#d95340]' : 'bg-[#fff6e5] text-[#d88a16]'">
+                                    <component :is="alertIcon(alert)" :size="18" />
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-xs font-bold" :class="alert.severity === 'critical' ? 'text-[#c44032]' : 'text-[#9a6715]'">{{ alert.title }}</div>
+                                    <p class="mt-1 text-[11px] leading-4 text-[#718599]">{{ alert.description }}</p>
+                                </div>
+                                <ArrowRight :size="15" class="mt-2 shrink-0 text-[#9aabb9]" />
+                            </Link>
+                        </div>
+                        <div v-else class="grid min-h-48 place-items-center px-6 py-8 text-center">
+                            <div><Check :size="28" class="mx-auto text-[#18a995]" /><p class="mt-3 text-sm font-semibold text-[#526a80]">Operação sob controle</p><p class="mt-1 text-xs text-[#8393a3]">Nenhum risco imediato foi identificado.</p></div>
                         </div>
                     </div>
                 </section>
@@ -582,10 +677,38 @@ const completeTutorial = () => {
             </div>
         </div>
 
-        <div v-if="tutorialOpen && game" class="fixed inset-0 z-[90] grid place-items-center overflow-y-auto bg-[#071729]/65 p-4">
-            <div class="w-full max-w-xl rounded-md bg-white shadow-2xl">
-                <div class="border-b border-[#e2e9ee] px-6 py-5"><div class="flex items-center gap-3"><span class="grid size-11 place-items-center rounded-md bg-[#e4f0fb] text-[#1769aa]"><BookOpen :size="22" /></span><div><h2 class="text-xl font-bold text-[#102039]">Primeiros passos</h2><p class="mt-0.5 text-sm text-[#6b7f93]">Prepare sua empresa antes de avançar o primeiro dia.</p></div></div></div>
-                <div class="space-y-4 p-6"><div class="flex gap-3"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-[#173f67] text-xs font-bold text-white">1</span><div><div class="text-sm font-bold text-[#263e56]">Compare fornecedores</div><p class="mt-1 text-xs leading-5 text-[#6b7f93]">Prazo, preço e confiabilidade mudam o risco da compra.</p></div></div><div class="flex gap-3"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-[#173f67] text-xs font-bold text-white">2</span><div><div class="text-sm font-bold text-[#263e56]">Compre estoque e ajuste preços</div><p class="mt-1 text-xs leading-5 text-[#6b7f93]">Sem estoque não há vendas; preços altos reduzem a demanda.</p></div></div><div class="flex gap-3"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-[#173f67] text-xs font-bold text-white">3</span><div><div class="text-sm font-bold text-[#263e56]">{{ manualAdvanceEnabled ? 'Avance um dia e analise' : 'Acompanhe a operação automática' }}</div><p class="mt-1 text-xs leading-5 text-[#6b7f93]">{{ manualAdvanceEnabled ? 'Entregas, contas, vendas e eventos são processados em ordem.' : 'As vendas ocorrem ao longo do dia; à meia-noite o sistema fecha o período e avança a data.' }}</p></div></div><button type="button" class="mt-2 h-11 w-full rounded-md bg-[#ef654f] text-sm font-bold text-white" @click="completeTutorial">Entendi, começar</button></div>
+        <div v-if="tutorialOpen && game && currentTutorialStep" class="fixed inset-0 z-[90] grid place-items-center overflow-y-auto bg-[#071729]/65 p-4">
+            <div class="w-full max-w-xl overflow-hidden rounded-md bg-white shadow-2xl">
+                <div class="border-b border-[#e2e9ee] px-6 py-5">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <span class="grid size-11 shrink-0 place-items-center rounded-md bg-[#e4f0fb] text-[#1769aa]"><BookOpen :size="22" /></span>
+                            <div><h2 class="text-xl font-bold text-[#102039]">Primeiros passos</h2><p class="mt-0.5 text-sm text-[#6b7f93]">Monte a base da operação antes de buscar crescimento.</p></div>
+                        </div>
+                        <button type="button" class="text-xs font-semibold text-[#718599] hover:text-[#31506d]" @click="completeTutorial(false)">Pular tour</button>
+                    </div>
+                    <div class="mt-5 grid grid-cols-4 gap-2" aria-label="Progresso do tour">
+                        <button v-for="(_, index) in tutorialSteps" :key="index" type="button" class="h-1.5 rounded-full transition" :class="index <= tutorialStep ? 'bg-[#19a895]' : 'bg-[#e2e9ee]'" :aria-label="`Ir para etapa ${index + 1}`" @click="tutorialStep = index"></button>
+                    </div>
+                </div>
+
+                <div class="p-6">
+                    <div class="text-xs font-bold uppercase text-[#718599]">Etapa {{ tutorialStep + 1 }} de {{ tutorialSteps.length }}</div>
+                    <div :key="tutorialStep" class="mt-4 flex items-start gap-4">
+                        <span class="grid size-14 shrink-0 place-items-center rounded-md" :class="currentTutorialStep.tone"><component :is="currentTutorialStep.icon" :size="27" /></span>
+                        <div>
+                            <h3 class="text-lg font-bold text-[#19324d]">{{ currentTutorialStep.title }}</h3>
+                            <p class="mt-2 text-sm leading-6 text-[#61758a]">{{ currentTutorialStep.description }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 rounded-md border border-[#dce8ee] bg-[#f4f8fa] px-4 py-3 text-sm text-[#496177]"><strong class="text-[#263e56]">Por que isso importa?</strong><span class="mt-1 block text-xs leading-5">{{ currentTutorialStep.tip }}</span></div>
+
+                    <div class="mt-6 flex items-center justify-between gap-3">
+                        <button type="button" class="h-10 rounded-md border border-[#cfdbe4] px-4 text-sm font-bold text-[#496177] disabled:cursor-not-allowed disabled:opacity-40" :disabled="tutorialStep === 0" @click="tutorialStep--">Voltar</button>
+                        <button v-if="tutorialStep < tutorialSteps.length - 1" type="button" class="inline-flex h-10 items-center gap-2 rounded-md bg-[#173f67] px-5 text-sm font-bold text-white hover:bg-[#102f4d]" @click="tutorialStep++">Próxima etapa <ArrowRight :size="16" /></button>
+                        <button v-else type="button" class="inline-flex h-10 items-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white hover:bg-[#d95340]" @click="completeTutorial(true)"><ShoppingCart :size="16" /> Começar por Compras</button>
+                    </div>
+                </div>
             </div>
         </div>
     </AuthenticatedLayout>

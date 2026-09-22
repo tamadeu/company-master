@@ -35,7 +35,10 @@ class GameController extends Controller
     {
         Gate::authorize('view', $game);
 
-        return Inertia::render('Dashboard', $dashboard->for($game, $request->user()));
+        return Inertia::render('Dashboard', [
+            ...$dashboard->for($game, $request->user()),
+            'startNewGame' => $request->boolean('new'),
+        ]);
     }
 
     public function advance(AdvanceDayRequest $request, Game $game, AdvanceDay $advanceDay): RedirectResponse

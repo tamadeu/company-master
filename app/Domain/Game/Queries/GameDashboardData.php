@@ -7,6 +7,7 @@ use App\Domain\Game\Services\GameDifficultyCatalog;
 use App\Domain\Game\Services\OfficeLocationCatalog;
 use App\Models\Game;
 use App\Models\User;
+use Illuminate\Support\Number;
 
 class GameDashboardData
 {
@@ -62,6 +63,60 @@ class GameDashboardData
             ])
             ->sortByDesc('revenueCents')
             ->values();
+        $stockAlerts = $company->products
+            ->map(function ($product) {
+                $quantity = $product->inventoryBalances->first()?->quantity ?? 0;
+
+                if ($quantity === 0) {
+                    return [
+                        'id' => "stockout-{$product->id}",
+                        'type' => 'stockout',
+                        'severity' => 'critical',
+                        'title' => "Ruptura: {$product->name}",
+                        'description' => 'Sem unidades disponíveis para atender vendas.',
+                        'area' => 'inventory',
+                    ];
+                }
+
+                if ($quantity <= $product->base_daily_demand) {
+                    return [
+                        'id' => "low-stock-{$product->id}",
+                        'type' => 'low_stock',
+                        'severity' => 'warning',
+                        'title' => "Estoque baixo: {$product->name}",
+                        'description' => "{$quantity} un. disponíveis para demanda base de {$product->base_daily_demand}/dia.",
+                        'area' => 'inventory',
+                    ];
+                }
+
+                return null;
+            })
+            ->filter()
+            ->take(2);
+        $problematicEvent = $activeEvent && in_array($activeEvent->type, ['heavy_rain', 'supplier_delay', 'emergency_maintenance'], true)
+            ? [[
+                'id' => "event-{$activeEvent->id}",
+                'type' => 'event',
+                'severity' => $activeEvent->type === 'emergency_maintenance' ? 'critical' : 'warning',
+                'title' => $activeEvent->title,
+                'description' => $activeEvent->description,
+                'area' => $activeEvent->type === 'supplier_delay' ? 'purchases' : 'finance',
+            ]]
+            : [];
+        $nextPayable = $company->financialEntries
+            ->where('type', 'outflow')
+            ->whereNull('paid_at')
+            ->filter(fn ($entry) => $entry->due_date?->betweenIncluded($game->current_date, $nextWeek))
+            ->sortBy('due_date')
+            ->first();
+        $financialAlerts = $nextPayable ? [[
+            'id' => "payable-{$nextPayable->id}",
+            'type' => 'payable',
+            'severity' => 'warning',
+            'title' => "Conta a pagar: {$nextPayable->description}",
+            'description' => sprintf('%s vence em %s.', Number::currency($nextPayable->amount_cents / 100, 'BRL', 'pt_BR'), $nextPayable->due_date->format('d/m/Y')),
+            'area' => 'finance',
+        ]] : [];
 
         return [
             'games' => $user->games()
@@ -129,6 +184,10 @@ class GameDashboardData
                     'totalCents' => $order->total_cents,
                 ])->values(),
             'salesByProduct' => $salesByProduct,
+            'operationalAlerts' => $stockAlerts
+                ->concat($problematicEvent)
+                ->concat($financialAlerts)
+                ->values(),
             'mission' => [
                 'stockPurchased' => $company->inventoryBalances->sum('quantity') > 0,
                 'firstDayCompleted' => $dayNumber > 1,

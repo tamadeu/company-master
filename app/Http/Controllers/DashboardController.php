@@ -16,6 +16,10 @@ class DashboardController extends Controller
         $game = $request->user()->games()->latest()->first();
 
         if ($game) {
+            if ($request->boolean('new')) {
+                return redirect()->route('games.show', ['game' => $game, 'new' => 1]);
+            }
+
             return redirect()->route('games.show', $game);
         }
 
@@ -32,6 +36,10 @@ class DashboardController extends Controller
             'tutorial' => ['completed' => true],
             'activeEvent' => null,
             'dailyHistory' => [],
+            'upcomingDeliveries' => [],
+            'salesByProduct' => [],
+            'operationalAlerts' => [],
+            'startNewGame' => true,
             'manualAdvanceEnabled' => app()->environment('local'),
         ]);
     }

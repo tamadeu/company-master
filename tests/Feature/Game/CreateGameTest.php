@@ -67,3 +67,18 @@ test('production games are scheduled for midnight and hide manual advancement', 
         ->get(route('games.show', $game))
         ->assertInertia(fn (Assert $page) => $page->where('manualAdvanceEnabled', false));
 });
+
+test('the new game flow opens onboarding while preserving existing games', function () {
+    $user = User::factory()->create();
+    $game = app(CreateGame::class)->execute($user, 'Existente', 'Empresa existente', 12348);
+
+    $this->actingAs($user)
+        ->get(route('dashboard', ['new' => 1]))
+        ->assertRedirect(route('games.show', ['game' => $game, 'new' => 1]));
+
+    $this->actingAs($user)
+        ->get(route('games.show', ['game' => $game, 'new' => 1]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('startNewGame', true)
+            ->has('games', 1));
+});

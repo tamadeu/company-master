@@ -115,5 +115,9 @@ test('the owner sees dashboard data derived from the game', function () {
             ->where('upcomingDeliveries.0.totalCents', 42_000)
             ->where('salesByProduct.0.productName', $product->name)
             ->where('salesByProduct.0.revenueCents', 57_000)
-            ->where('salesByProduct.0.unitsSold', 10));
+            ->where('salesByProduct.0.unitsSold', 10)
+            ->where('operationalAlerts.0.type', 'stockout')
+            ->where('operationalAlerts.0.severity', 'critical')
+            ->where('operationalAlerts.0.title', "Ruptura: {$product->name}")
+            ->where('operationalAlerts.0.area', 'inventory'));
 });

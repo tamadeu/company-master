@@ -23,7 +23,7 @@ import {
     X,
 } from '@lucide/vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 interface LayoutGame {
     id: number;
@@ -51,6 +51,8 @@ const page = usePage<
     }>
 >();
 const mobileNavigationOpen = ref(false);
+const currentRealDate = ref(new Date());
+let dateRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
 const game = computed(() => page.props.game ?? null);
 const company = computed(() => page.props.company ?? null);
@@ -92,7 +94,7 @@ const availableNavigation = computed<NavigationItem[]>(() => {
     ];
 });
 
-const formattedGameDate = computed(() => {
+const formattedRealDate = computed(() => {
     if (!game.value) {
         return null;
     }
@@ -101,7 +103,21 @@ const formattedGameDate = computed(() => {
         day: '2-digit',
         month: 'long',
         year: 'numeric',
-    }).format(new Date(`${game.value.currentDate}T00:00:00`));
+    }).format(currentRealDate.value);
+});
+
+const scheduleDateRefresh = () => {
+    currentRealDate.value = new Date();
+    const nextMidnight = new Date();
+    nextMidnight.setHours(24, 0, 1, 0);
+    dateRefreshTimer = setTimeout(scheduleDateRefresh, nextMidnight.getTime() - Date.now());
+};
+
+onMounted(scheduleDateRefresh);
+onUnmounted(() => {
+    if (dateRefreshTimer) {
+        clearTimeout(dateRefreshTimer);
+    }
 });
 
 const unavailableNavigation: Array<{ label: string; icon: typeof CircleDollarSign }> = [];
@@ -189,7 +205,7 @@ const unavailableNavigation: Array<{ label: string; icon: typeof CircleDollarSig
                 <div v-if="game" class="hidden items-center gap-3 border-r border-[#dce5ec] pr-6 sm:flex">
                     <CalendarDays :size="20" class="text-[#173f67]" />
                     <div>
-                        <div class="text-xs font-semibold capitalize text-[#233b57]">{{ formattedGameDate }}</div>
+                        <div class="text-xs font-semibold capitalize text-[#233b57]">{{ formattedRealDate }}</div>
                         <div class="text-[11px] text-[#7a8da0]">Dia {{ game.dayNumber }} de {{ game.victoryDays }}</div>
                     </div>
                 </div>
