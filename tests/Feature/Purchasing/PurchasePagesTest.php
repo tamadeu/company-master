@@ -15,7 +15,7 @@ test('the owner can view supplier offers and purchase orders', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Purchases/Index')
-            ->has('suppliers', 3)
+            ->has('suppliers', 4)
             ->has('suppliers.0.offers', 5)
             ->has('orders', 0));
 });
@@ -47,6 +47,23 @@ test('the purchase endpoint rejects a supplier from another game', function () {
         ->assertSessionHasErrors('supplier_id');
 
     expect($game->company->purchaseOrders()->count())->toBe(0);
+});
+
+test('the owner can cancel an order that is still awaiting delivery', function () {
+    $user = User::factory()->create();
+    $game = app(CreateGame::class)->execute($user, 'Compras', 'Mercado Aurora', 306);
+    $supplier = $game->company->suppliers()->where('name', 'Distribuidora Alfa')->firstOrFail();
+    $offer = $supplier->products()->firstOrFail();
+    $order = app(CreatePurchaseOrder::class)->execute($game, $supplier, [
+        ['product_id' => $offer->product_id, 'quantity' => 4],
+    ]);
+
+    $this->actingAs($user)
+        ->patch(route('games.purchase-orders.cancel', [$game, $order]))
+        ->assertRedirect(route('games.purchases.index', $game))
+        ->assertSessionHas('success', 'Pedido cancelado e vagas de estoque liberadas.');
+
+    expect($order->fresh()->status)->toBe('cancelled');
 });
 
 test('the owner sees balances and immutable movements in inventory', function () {

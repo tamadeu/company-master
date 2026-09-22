@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Domain\Inventory\Actions\ReceivePurchaseOrder;
+use App\Domain\Purchasing\Actions\CancelPurchaseOrder;
 use App\Domain\Purchasing\Actions\CreatePurchaseOrder;
 use App\Domain\Purchasing\Queries\PurchasesPageData;
 use App\Http\Requests\StorePurchaseOrderRequest;
@@ -28,9 +29,12 @@ class PurchaseController extends Controller
         Gate::authorize('view', $game);
         $supplier = Supplier::findOrFail($request->integer('supplier_id'));
 
-        $createOrder->execute($game, $supplier, $request->validated('items'));
+        $order = $createOrder->execute($game, $supplier, $request->validated('items'));
 
-        return redirect()->route('games.purchases.index', $game)->with('success', 'Pedido criado com sucesso.');
+        return redirect()->route('games.purchases.index', $game)->with(
+            'success',
+            $order->status === 'received' ? 'Pedido criado e recebido no estoque.' : 'Pedido criado com sucesso.',
+        );
     }
 
     public function receive(Game $game, PurchaseOrder $purchaseOrder, ReceivePurchaseOrder $receiveOrder): RedirectResponse
@@ -39,5 +43,13 @@ class PurchaseController extends Controller
         $receiveOrder->execute($game, $purchaseOrder);
 
         return redirect()->route('games.purchases.index', $game)->with('success', 'Pedido recebido no estoque.');
+    }
+
+    public function cancel(Game $game, PurchaseOrder $purchaseOrder, CancelPurchaseOrder $cancelOrder): RedirectResponse
+    {
+        Gate::authorize('view', $game);
+        $cancelOrder->execute($game, $purchaseOrder);
+
+        return redirect()->route('games.purchases.index', $game)->with('success', 'Pedido cancelado e vagas de estoque liberadas.');
     }
 }

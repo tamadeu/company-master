@@ -2,12 +2,15 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import {
     BadgeCheck,
+    Ban,
     CheckCircle2,
     Clock3,
     PackageCheck,
     ShoppingCart,
     RefreshCw,
+    TriangleAlert,
     Truck,
+    X,
 } from '@lucide/vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
@@ -59,9 +62,11 @@ interface Order {
     expectedDeliveryDate: string;
     receivedDate: string | null;
     totalCents: number;
-    paymentStatus: 'paid' | 'payable';
+    paymentStatus: 'paid' | 'payable' | 'cancelled';
     dueDate: string | null;
     canReceive: boolean;
+    canCancel: boolean;
+    cancellationFeeCents: number;
     items: OrderItem[];
 }
 
@@ -94,6 +99,9 @@ const selectedSupplierId = ref(props.suppliers[0]?.id ?? null);
 const quantities = reactive<Record<number, number>>({});
 const localError = ref('');
 const receivingOrderId = ref<number | null>(null);
+const cancellingOrder = ref<Order | null>(null);
+const cancellationError = ref('');
+const cancellationProcessing = ref(false);
 const form = useForm<{
     supplier_id: number | null;
     items: Array<{ product_id: number; quantity: number }>;
@@ -118,6 +126,19 @@ const formatMoney = (cents: number) => moneyFormatter.format(cents / 100);
 const formatDate = (date: string | null) => date
     ? new Intl.DateTimeFormat('pt-BR').format(new Date(`${date}T00:00:00`))
     : '—';
+const deliveryTimeLabel = (days: number) => days === 0 ? 'Imediata' : `${days} dia(s)`;
+const orderStatusLabel = (status: string) => status === 'received'
+    ? 'Recebido'
+    : status === 'cancelled' ? 'Cancelado' : 'Aguardando entrega';
+const orderStatusTone = (status: string) => status === 'received'
+    ? 'bg-[#dff7f1] text-[#087c68]'
+    : status === 'cancelled' ? 'bg-[#edf1f4] text-[#64798d]' : 'bg-[#fff3dd] text-[#a56500]';
+const paymentLabel = (order: Order) => {
+    if (order.paymentStatus === 'cancelled') return `Multa ${formatMoney(order.cancellationFeeCents)}`;
+    if (order.paymentStatus === 'paid') return 'Pago';
+
+    return `Vence ${formatDate(order.dueDate)}`;
+};
 
 const selectSupplier = (supplierId: number) => {
     selectedSupplierId.value = supplierId;
@@ -160,6 +181,39 @@ const receiveOrder = (order: Order) => {
         },
     });
 };
+
+const openCancellation = (order: Order) => {
+    cancellingOrder.value = order;
+    cancellationError.value = '';
+};
+
+const closeCancellation = () => {
+    if (!cancellationProcessing.value) {
+        cancellingOrder.value = null;
+        cancellationError.value = '';
+    }
+};
+
+const cancelOrder = () => {
+    if (!cancellingOrder.value) {
+        return;
+    }
+
+    cancellationProcessing.value = true;
+    router.patch(route('games.purchase-orders.cancel', [props.game.id, cancellingOrder.value.id]), {}, {
+        preserveScroll: true,
+        onSuccess: () => closeCancellation(),
+        onError: (errors) => {
+            cancellationError.value = Object.values(errors)[0] ?? 'Não foi possível cancelar o pedido.';
+        },
+        onFinish: () => {
+            cancellationProcessing.value = false;
+            if (!cancellationError.value) {
+                cancellingOrder.value = null;
+            }
+        },
+    });
+};
 </script>
 
 <template>
@@ -174,7 +228,7 @@ const receiveOrder = (order: Order) => {
 
             <section class="mb-4 flex flex-col gap-4 border-l-4 border-[#1769aa] bg-[#eef6fb] px-5 py-4 sm:flex-row sm:items-center sm:justify-between" aria-label="Reposição automática"><div class="flex items-start gap-3"><RefreshCw :size="21" class="mt-0.5 shrink-0 text-[#1769aa]" /><div><h2 class="text-sm font-bold text-[#19324d]">Reposição automática</h2><p class="mt-1 text-xs leading-5 text-[#61758a]">Dispara com até {{ automaticPurchasing.reorderPointDays }} dias de demanda em estoque e busca cobertura de {{ automaticPurchasing.targetStockDays }} dias.</p></div></div><div class="shrink-0 text-left sm:text-right"><div class="text-lg font-bold text-[#173f67]">{{ automaticPurchasing.totalCapacityUnits }} un./dia</div><div class="text-xs text-[#718599]">{{ automaticPurchasing.buyers.length }} comprador(es) ativo(s)</div></div></section>
 
-            <section class="grid gap-3 md:grid-cols-3" aria-label="Fornecedores disponíveis">
+            <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Fornecedores disponíveis">
                 <button
                     v-for="supplier in suppliers"
                     :key="supplier.id"
@@ -191,7 +245,7 @@ const receiveOrder = (order: Order) => {
                         <BadgeCheck :size="20" :class="selectedSupplierId === supplier.id ? 'text-[#159580]' : 'text-[#9aabb9]'" />
                     </div>
                     <div class="mt-4 grid grid-cols-3 gap-2 border-t border-[#edf1f4] pt-3 text-center">
-                        <div><div class="text-sm font-bold text-[#263e56]">{{ supplier.leadTimeDays }}d</div><div class="text-[10px] uppercase text-[#8595a4]">Entrega</div></div>
+                        <div><div class="text-sm font-bold text-[#263e56]">{{ deliveryTimeLabel(supplier.leadTimeDays) }}</div><div class="text-[10px] uppercase text-[#8595a4]">Entrega</div></div>
                         <div><div class="text-sm font-bold text-[#263e56]">{{ supplier.paymentTermDays === 0 ? 'À vista' : `${supplier.paymentTermDays}d` }}</div><div class="text-[10px] uppercase text-[#8595a4]">Pagamento</div></div>
                         <div><div class="text-sm font-bold text-[#263e56]">{{ supplier.reliabilityPercent }}%</div><div class="text-[10px] uppercase text-[#8595a4]">Confiança</div></div>
                     </div>
@@ -223,7 +277,7 @@ const receiveOrder = (order: Order) => {
                     <div class="text-sm font-bold text-[#19324d]">Resumo do pedido</div>
                     <div class="mt-5 space-y-3 text-sm">
                         <div class="flex justify-between text-[#64798d]"><span>Caixa disponível</span><strong class="text-[#263e56]">{{ formatMoney(cashBalanceCents) }}</strong></div>
-                        <div class="flex justify-between text-[#64798d]"><span>Entrega prevista</span><strong class="text-[#263e56]">{{ selectedSupplier.leadTimeDays }} dia(s)</strong></div>
+                        <div class="flex justify-between text-[#64798d]"><span>Entrega prevista</span><strong class="text-[#263e56]">{{ deliveryTimeLabel(selectedSupplier.leadTimeDays) }}</strong></div>
                         <div class="flex justify-between text-[#64798d]"><span>Pagamento</span><strong class="text-[#263e56]">{{ selectedSupplier.paymentTermDays === 0 ? 'À vista' : `${selectedSupplier.paymentTermDays} dias` }}</strong></div>
                         <div class="flex justify-between text-[#64798d]"><span>Vagas disponíveis</span><strong :class="exceedsCapacity ? 'text-[#d65737]' : 'text-[#263e56]'">{{ inventoryCapacity.availableUnits }}</strong></div>
                         <div class="flex justify-between text-[#64798d]"><span>Unidades do pedido</span><strong :class="exceedsCapacity ? 'text-[#d65737]' : 'text-[#263e56]'">{{ orderUnits }}</strong></div>
@@ -241,12 +295,41 @@ const receiveOrder = (order: Order) => {
                 <div v-else class="divide-y divide-[#edf1f4]">
                     <article v-for="order in orders" :key="order.id" class="p-5">
                         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                            <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="text-sm font-bold text-[#19324d]">Pedido #{{ order.id }}</span><span class="rounded px-2 py-1 text-[11px] font-bold" :class="order.status === 'received' ? 'bg-[#dff7f1] text-[#087c68]' : 'bg-[#fff3dd] text-[#a56500]'">{{ order.status === 'received' ? 'Recebido' : 'Aguardando entrega' }}</span><span v-if="order.automatic" class="rounded bg-[#e4f0fb] px-2 py-1 text-[11px] font-bold text-[#1769aa]">Automático</span></div><div class="mt-1 text-xs text-[#718599]">{{ order.supplierName }} · {{ order.items.length }} produto(s)<span v-if="order.buyerName"> · Comprador: {{ order.buyerName }}</span></div></div>
-                            <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-xs sm:grid-cols-4"><div><span class="block text-[#8a99a8]">Total</span><strong class="text-[#263e56]">{{ formatMoney(order.totalCents) }}</strong></div><div><span class="block text-[#8a99a8]">Entrega</span><strong class="text-[#263e56]">{{ formatDate(order.expectedDeliveryDate) }}</strong></div><div><span class="block text-[#8a99a8]">Pagamento</span><strong class="text-[#263e56]">{{ order.paymentStatus === 'paid' ? 'Pago' : `Vence ${formatDate(order.dueDate)}` }}</strong></div><button v-if="order.canReceive" type="button" :disabled="receivingOrderId === order.id" class="col-span-2 inline-flex h-9 items-center justify-center gap-2 rounded-md bg-[#159b87] px-3 font-bold text-white sm:col-span-1" @click="receiveOrder(order)"><PackageCheck :size="15" /> Receber</button><div v-else-if="order.status === 'ordered'" class="col-span-2 flex items-center gap-1.5 text-[#718599] sm:col-span-1"><Clock3 :size="14" /> Em trânsito</div><div v-else class="col-span-2 flex items-center gap-1.5 text-[#16836f] sm:col-span-1"><CheckCircle2 :size="14" /> No estoque</div></div>
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2"><span class="text-sm font-bold text-[#19324d]">Pedido #{{ order.id }}</span><span class="rounded px-2 py-1 text-[11px] font-bold" :class="orderStatusTone(order.status)">{{ orderStatusLabel(order.status) }}</span><span v-if="order.automatic" class="rounded bg-[#e4f0fb] px-2 py-1 text-[11px] font-bold text-[#1769aa]">Automático</span></div>
+                                <div class="mt-1 text-xs text-[#718599]">{{ order.supplierName }} · {{ order.items.length }} produto(s)<span v-if="order.buyerName"> · Comprador: {{ order.buyerName }}</span></div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-x-8 gap-y-3 text-xs sm:grid-cols-4">
+                                <div><span class="block text-[#8a99a8]">Total</span><strong class="text-[#263e56]">{{ formatMoney(order.totalCents) }}</strong></div>
+                                <div><span class="block text-[#8a99a8]">Entrega</span><strong class="text-[#263e56]">{{ formatDate(order.expectedDeliveryDate) }}</strong></div>
+                                <div><span class="block text-[#8a99a8]">Pagamento</span><strong class="text-[#263e56]">{{ paymentLabel(order) }}</strong></div>
+                                <div class="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
+                                    <button v-if="order.canReceive" type="button" :disabled="receivingOrderId === order.id" class="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-[#159b87] px-3 font-bold text-white" @click="receiveOrder(order)"><PackageCheck :size="15" /> Receber</button>
+                                    <span v-else-if="order.status === 'ordered'" class="flex items-center gap-1.5 text-[#718599]"><Clock3 :size="14" /> Em trânsito</span>
+                                    <span v-else-if="order.status === 'received'" class="flex items-center gap-1.5 text-[#16836f]"><CheckCircle2 :size="14" /> No estoque</span>
+                                    <span v-else class="flex items-center gap-1.5 text-[#718599]"><Ban :size="14" /> Cancelado</span>
+                                    <button v-if="order.canCancel" type="button" class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-[#efb5ad] px-3 font-bold text-[#c44032] hover:bg-[#fff5f3]" @click="openCancellation(order)"><Ban :size="14" /> Cancelar</button>
+                                </div>
+                            </div>
                         </div>
                     </article>
                 </div>
             </section>
+        </div>
+
+        <div v-if="cancellingOrder" class="fixed inset-0 z-[80] grid place-items-center bg-[#071729]/60 p-4" @click.self="closeCancellation">
+            <div class="w-full max-w-md rounded-md bg-white shadow-2xl">
+                <div class="flex items-start justify-between border-b border-[#e2e9ee] px-6 py-5">
+                    <div class="flex items-center gap-3"><span class="grid size-10 place-items-center rounded-md bg-[#fff0ed] text-[#c44032]"><TriangleAlert :size="20" /></span><div><h2 class="text-lg font-bold text-[#102039]">Cancelar pedido #{{ cancellingOrder.id }}?</h2><p class="mt-0.5 text-xs text-[#718599]">Esta ação não poderá ser desfeita.</p></div></div>
+                    <button type="button" class="grid size-8 place-items-center rounded-md text-[#718599] hover:bg-[#eef3f6]" aria-label="Fechar" @click="closeCancellation"><X :size="18" /></button>
+                </div>
+                <div class="p-6">
+                    <p class="text-sm leading-6 text-[#526a80]">As unidades em trânsito deixarão de ocupar vagas no estoque. Uma multa de <strong class="text-[#c44032]">10% do pedido</strong> será paga imediatamente.</p>
+                    <div class="mt-4 flex items-center justify-between rounded-md bg-[#fff5f3] px-4 py-3"><span class="text-sm text-[#765f5d]">Multa de cancelamento</span><strong class="text-lg text-[#c44032]">{{ formatMoney(cancellingOrder.cancellationFeeCents) }}</strong></div>
+                    <p v-if="cancellationError" class="mt-3 text-sm text-red-600">{{ cancellationError }}</p>
+                    <div class="mt-6 flex justify-end gap-2"><button type="button" :disabled="cancellationProcessing" class="h-10 rounded-md border border-[#cfdbe4] px-4 text-sm font-bold text-[#496177] disabled:opacity-50" @click="closeCancellation">Manter pedido</button><button type="button" :disabled="cancellationProcessing" class="inline-flex h-10 items-center gap-2 rounded-md bg-[#d94f40] px-4 text-sm font-bold text-white hover:bg-[#c44032] disabled:opacity-50" @click="cancelOrder"><Ban :size="16" /> {{ cancellationProcessing ? 'Cancelando...' : 'Confirmar cancelamento' }}</button></div>
+                </div>
+            </div>
         </div>
     </AuthenticatedLayout>
 </template>

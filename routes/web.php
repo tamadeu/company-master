@@ -39,6 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/games/{game}/purchases', [PurchaseController::class, 'index'])->name('games.purchases.index');
     Route::post('/games/{game}/purchase-orders', [PurchaseController::class, 'store'])->name('games.purchase-orders.store');
     Route::post('/games/{game}/purchase-orders/{purchaseOrder}/receive', [PurchaseController::class, 'receive'])->name('games.purchase-orders.receive');
+    Route::patch('/games/{game}/purchase-orders/{purchaseOrder}/cancel', [PurchaseController::class, 'cancel'])->name('games.purchase-orders.cancel');
     Route::get('/games/{game}/inventory', [InventoryController::class, 'index'])->name('games.inventory.index');
     Route::get('/games/{game}/finance', [FinanceController::class, 'index'])->name('games.finance.index');
     Route::get('/games/{game}/reports', [ReportController::class, 'index'])->name('games.reports.index');

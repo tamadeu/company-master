@@ -642,7 +642,7 @@ const completeTutorial = (openPurchases = false) => {
                 <div class="w-full max-w-2xl rounded-md border border-[#dfe7ee] bg-white p-7 shadow-sm sm:p-10">
                     <span class="grid size-14 place-items-center rounded-md bg-[#dff7f1] text-[#008b76]"><Store :size="28" /></span>
                     <h2 class="mt-5 text-2xl font-bold text-[#102039]">Crie sua primeira empresa</h2>
-                    <p class="mt-2 max-w-xl text-sm leading-6 text-[#657a90]">Você começará em 1º de janeiro de 2026 com capital definido pela dificuldade, cinco produtos e três fornecedores para comparar.</p>
+                    <p class="mt-2 max-w-xl text-sm leading-6 text-[#657a90]">Você começará na data atual com capital definido pela dificuldade, cinco produtos e quatro fornecedores para comparar.</p>
                     <button type="button" class="mt-6 inline-flex h-11 items-center gap-2 rounded-md bg-[#ef654f] px-5 text-sm font-bold text-white" @click="createGameOpen = true"><Plus :size="18" /> Criar empresa</button>
                 </div>
             </section>

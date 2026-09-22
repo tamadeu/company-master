@@ -55,7 +55,7 @@ return [
         ],
     ],
     'income_statement' => [
-        'operating_expense_categories' => ['fixed_expense', 'maintenance', 'operating_expense', 'payroll'],
+        'operating_expense_categories' => ['fixed_expense', 'maintenance', 'operating_expense', 'payroll', 'purchase_cancellation_fee'],
         'sales_deduction_categories' => ['sales_deduction'],
         'depreciation_categories' => ['depreciation', 'amortization'],
         'financial_income_categories' => ['financial_income'],
@@ -139,6 +139,7 @@ return [
         ['name' => 'Distribuidora Alfa', 'profile' => 'Equilibrado', 'lead_time_days' => 3, 'payment_term_days' => 7, 'reliability_percent' => 95, 'cost_percent' => 100],
         ['name' => 'Atacado Econômico', 'profile' => 'Econômico', 'lead_time_days' => 7, 'payment_term_days' => 0, 'reliability_percent' => 85, 'cost_percent' => 92],
         ['name' => 'Entrega Expressa', 'profile' => 'Rápido', 'lead_time_days' => 1, 'payment_term_days' => 14, 'reliability_percent' => 98, 'cost_percent' => 112],
+        ['name' => 'Pronta Entrega', 'profile' => 'Imediato', 'lead_time_days' => 0, 'payment_term_days' => 0, 'reliability_percent' => 100, 'cost_percent' => 135],
     ],
     'fixed_expenses' => [
         ['description' => 'Aluguel', 'amount_cents' => 800_000, 'day_of_month' => 5],

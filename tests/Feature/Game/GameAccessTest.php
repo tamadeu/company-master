@@ -108,7 +108,7 @@ test('the owner sees dashboard data derived from the game', function () {
             ->where('metrics.inventoryValueCents', 0)
             ->where('metrics.payablesNextSevenDaysCents', 800_000)
             ->has('products', 5)
-            ->has('suppliers', 3)
+            ->has('suppliers', 4)
             ->where('upcomingDeliveries.0.supplierName', $supplier->name)
             ->where('upcomingDeliveries.0.expectedDeliveryDate', '2026-01-03')
             ->where('upcomingDeliveries.0.units', 12)

@@ -4,6 +4,7 @@ namespace App\Domain\Purchasing\Actions;
 
 use App\Domain\Finance\Services\LedgerService;
 use App\Domain\Inbox\Services\InboxService;
+use App\Domain\Inventory\Actions\ReceivePurchaseOrder;
 use App\Domain\Inventory\Services\InventoryCapacityService;
 use App\Models\Employee;
 use App\Models\Game;
@@ -19,6 +20,7 @@ class CreatePurchaseOrder
         private readonly LedgerService $ledger,
         private readonly InventoryCapacityService $inventoryCapacity,
         private readonly InboxService $inbox,
+        private readonly ReceivePurchaseOrder $receivePurchaseOrder,
     ) {}
 
     /** @param array<int, array{product_id: int, quantity: int}> $items */
@@ -125,6 +127,10 @@ class CreatePurchaseOrder
                     'game_date' => $lockedGame->current_date->toDateString(),
                 ],
             );
+
+            if ($lockedSupplier->lead_time_days === 0) {
+                $order = $this->receivePurchaseOrder->execute($lockedGame, $order);
+            }
 
             return $order->load('supplier', 'items.product', 'financialEntry');
         });

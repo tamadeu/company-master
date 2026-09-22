@@ -57,7 +57,7 @@ Se o repositório já possuir outra stack, preserve a estrutura existente e adap
 - uma empresa varejista por partida;
 - capital inicial de R$ 100.000,00;
 - 5 produtos;
-- 3 fornecedores;
+- 4 fornecedores;
 - compra de produtos;
 - prazo de entrega de fornecedores;
 - controle de estoque;
@@ -96,7 +96,7 @@ Ao criar uma partida, o sistema deve:
 2. definir a data inicial do jogo como `2026-01-01`;
 3. creditar R$ 100.000,00 no caixa;
 4. cadastrar 5 produtos iniciais;
-5. cadastrar 3 fornecedores com preço, prazo e confiabilidade diferentes;
+5. cadastrar 4 fornecedores com preço, prazo e confiabilidade diferentes, incluindo uma opção premium de entrega imediata;
 6. criar despesas fixas recorrentes;
 7. iniciar todos os produtos sem estoque ou com um pequeno estoque de demonstração;
 8. exibir um tutorial curto com a primeira missão: comprar estoque e concluir o primeiro dia.

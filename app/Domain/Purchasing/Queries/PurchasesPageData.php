@@ -85,9 +85,13 @@ class PurchasesPageData
                     'expectedDeliveryDate' => $order->expected_delivery_date->toDateString(),
                     'receivedDate' => $order->received_at_game_date?->toDateString(),
                     'totalCents' => $order->total_cents,
-                    'paymentStatus' => $order->financialEntry?->paid_at ? 'paid' : 'payable',
+                    'paymentStatus' => $order->status === 'cancelled'
+                        ? 'cancelled'
+                        : ($order->financialEntry?->paid_at ? 'paid' : 'payable'),
                     'dueDate' => $order->financialEntry?->due_date?->toDateString(),
                     'canReceive' => $order->status === 'ordered' && $game->current_date->greaterThanOrEqualTo($order->expected_delivery_date),
+                    'canCancel' => $order->status === 'ordered',
+                    'cancellationFeeCents' => intdiv($order->total_cents + 5, 10),
                     'items' => $order->items->map(fn ($item) => [
                         'productName' => $item->product->name,
                         'quantity' => $item->quantity,
