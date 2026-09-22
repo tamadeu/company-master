@@ -120,7 +120,13 @@ class DayProcessor
             $outcome = $this->outcomes->evaluate($lockedGame->setRelation('company', $company), $completedDays);
             $gameUrl = "/games/{$lockedGame->id}";
 
-            if ($sales['units_sold'] > 0) {
+            $salesAlreadyNotified = $lockedGame->user->inboxMessages()
+                ->where('category', 'sale')
+                ->where('metadata->game_id', $lockedGame->id)
+                ->where('metadata->game_date', $expectedDate)
+                ->exists();
+
+            if ($sales['units_sold'] > 0 && ! $salesAlreadyNotified) {
                 $this->inbox->sendSystem(
                     $lockedGame->user,
                     'sale',

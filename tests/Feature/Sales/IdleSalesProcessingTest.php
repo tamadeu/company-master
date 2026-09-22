@@ -7,10 +7,12 @@ use App\Domain\Sales\Services\SalesCapacityService;
 use App\Jobs\ProcessIdleSales;
 use App\Models\DailySnapshot;
 use App\Models\Game;
+use App\Models\InboxMessage;
 use App\Models\Sale;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Bus;
+use Inertia\Testing\AssertableInertia as Assert;
 
 function idleSalesGame(int $seed = 8300): Game
 {
@@ -35,6 +37,15 @@ test('an idle sales tick sells without advancing the game date or requiring auth
         ->and($game->fresh()->current_date->toDateString())->toBe('2026-01-01')
         ->and($game->company->fresh()->cash_balance_cents)->toBeGreaterThan($cashBefore)
         ->and(Sale::where('tick_key', '2026-09-21-0012')->exists())->toBeTrue();
+    $notification = InboxMessage::where('recipient_user_id', $game->user_id)->where('category', 'sale')->firstOrFail();
+    expect($notification->metadata)->toMatchArray([
+        'sale_id' => $result['sale_id'],
+        'tick_key' => '2026-09-21-0012',
+        'game_id' => $game->id,
+        'game_date' => '2026-01-01',
+        'revenue_cents' => $result['revenue_cents'],
+        'units_sold' => $result['units_sold'],
+    ])->and($notification->action_url)->toBe("/games/{$game->id}/products");
 });
 
 test('the same idle tick is idempotent', function () {
@@ -46,7 +57,37 @@ test('the same idle tick is idempotent', function () {
     $second = $processor->process($game->id, '2026-01-01', 'tick-1', 5_000);
 
     expect($second)->toBe($first)
-        ->and(Sale::where('company_id', $game->company->id)->count())->toBe(1);
+        ->and(Sale::where('company_id', $game->company->id)->count())->toBe(1)
+        ->and(InboxMessage::where('recipient_user_id', $game->user_id)->where('category', 'sale')->count())->toBe(1);
+});
+
+test('an idle tick without sold units does not create a notification', function () {
+    $this->app->instance('env', 'production');
+    $game = app(CreateGame::class)->execute(User::factory()->create(), 'Sem estoque', 'Empresa sem estoque', 8306);
+
+    $result = app(IdleSalesProcessor::class)->process($game->id, '2026-01-01', 'empty-tick', 5_000);
+
+    expect($result['units_sold'])->toBe(0)
+        ->and(InboxMessage::where('recipient_user_id', $game->user_id)->where('category', 'sale')->exists())->toBeFalse();
+});
+
+test('an idle sale appears in both inbox and sales notifications', function () {
+    $this->app->instance('env', 'production');
+    $game = idleSalesGame(8307);
+    app(IdleSalesProcessor::class)->process($game->id, '2026-01-01', 'visible-tick', 10_000);
+    $message = InboxMessage::where('recipient_user_id', $game->user_id)->where('category', 'sale')->firstOrFail();
+
+    $this->actingAs($game->user)
+        ->get(route('inbox.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('messages.data.0.id', $message->id)
+            ->where('messages.data.0.category', 'sale'));
+
+    $this->actingAs($game->user)
+        ->get(route('notifications.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('notifications.data.0.id', $message->id)
+            ->where('notifications.data.0.metadata.tick_key', 'visible-tick'));
 });
 
 test('successive ticks respect cumulative daily commercial capacity', function () {
@@ -77,7 +118,8 @@ test('production midnight closing aggregates idle sales without creating another
         ->and($summary['units_sold'])->toBe($idle['units_sold'])
         ->and($summary['sales_revenue_cents'])->toBe($idle['revenue_cents'])
         ->and($game->fresh()->current_date->toDateString())->toBe('2026-01-02')
-        ->and(DailySnapshot::value('sales_revenue_cents'))->toBe($idle['revenue_cents']);
+        ->and(DailySnapshot::value('sales_revenue_cents'))->toBe($idle['revenue_cents'])
+        ->and(InboxMessage::where('recipient_user_id', $game->user_id)->where('category', 'sale')->count())->toBe(1);
 });
 
 test('the idle dispatcher queues active games before their midnight closing', function () {
